@@ -156,7 +156,7 @@ if seccion == "💨 Cake Oven Gas":
     # ==========================================
     st.sidebar.header("⚙️ Condiciones de Operación")
     st.sidebar.markdown("Ajusta T y P para cada gas individualmente:")
-
+    
     condiciones_usuario = {}
     resultados_m1_global = []
     resultados_m2_global = []
@@ -497,7 +497,7 @@ if seccion == "💨 Cake Oven Gas":
         st.pyplot(fig_hz)
 
 # =====================================================================
-# 🔵 SECCIÓN 2: LÍQUIDOS (El lienzo en blanco para lo nuevo)
+# 🔵 SECCIÓN 2: LÍQUIDOS
 # =====================================================================
 elif seccion == "💧 SoyBean Oil":
     st.header("💧 Módulo de Viscosidad para Líquidos")
@@ -531,14 +531,22 @@ elif seccion == "💧 SoyBean Oil":
 
     # 2. FUNCIONES DE LÍQUIDOS (Devuelven la viscosidad en cP)
     def modelo_L1_sastri_rao(T, Tb, n_c, n_db, n_ch3, n_ch2, n_cooh):
+
         sum_delta_nb = (n_ch3 * 0.105) + (n_ch2 * 0.0) + (n_db * -0.005) + (n_cooh * 0.250)
         n_sastri = 0.2 + (n_cooh * 0.100) + (0.050 if n_c > 8 else 0.0)
-        tr = T / Tb
+        
+        tr = (T / Tb)
         f_termico = (3 - 2 * tr)**0.19
-        ln_pvp = (4.5398 + 1.0309 * math.log(Tb)) * (1 - (f_termico / tr) - 0.38 * f_termico * math.log(tr))
-        visc_sastri = sum_delta_nb * (math.exp(ln_pvp) ** (-n_sastri))
+        
+        term_a = 1 - (f_termico / tr)
+        term_b = 0.38 * f_termico * math.log(tr)
+        ln_pvp = (4.5398 + 1.0309 * math.log(Tb)) * (term_a - term_b)
+        
+        pvp = math.exp(ln_pvp)
+        visc_sastri = sum_delta_nb * (pvp ** (-n_sastri))
+        
         return visc_sastri
-
+    
     def modelo_L2_orrick_erbar(T, M, rho, n_c, n_db, n_cooh):
         n_orrick = n_c - n_cooh
         a_oe = -(6.95 + 0.21 * n_orrick) + (n_db * 0.24) + (n_cooh * -0.90)
@@ -563,6 +571,18 @@ elif seccion == "💧 SoyBean Oil":
     # 3. INTERFAZ: PANEL LATERAL DE LÍQUIDOS
     st.sidebar.header("⚙️ Condiciones de Operación (Líquidos)")
     st.sidebar.markdown("Ajusta la Temperatura de operación para cada ácido:")
+    # --- CÓDIGO PARA EL SIDEBAR ---
+    st.sidebar.markdown("### 🧪 Viscosidades Experimentales (cP)")
+        
+    # Entradas numéricas con los valores por defecto (value=...)
+    v_exp_oleico = st.sidebar.number_input("Ácido Oleico", value=5.60, step=0.1)
+    v_exp_linoleico = st.sidebar.number_input("Ácido Linoleico", value=4.90, step=0.1) # Cambia el 4.90 por tu valor
+    v_exp_linolenico = st.sidebar.number_input("Ácido Linolénico", value=4.10, step=0.1) # Cambia el 4.10 por tu valor
+    v_exp_palmitico = st.sidebar.number_input("Ácido Palmítico", value=6.20, step=0.1) # Cambia el 6.20 por tu valor
+    v_exp_estearico = st.sidebar.number_input("Ácido Esteárico", value=8.10, step=0.1) # Cambia el 8.10 por tu valor
+
+    # Agrupamos estas variables en una lista para usarla fácilmente en las tablas
+    viscosidades_exp = [v_exp_oleico, v_exp_linoleico, v_exp_linolenico, v_exp_palmitico, v_exp_estearico]
 
     resultados_L1, resultados_L2, resultados_L3, resultados_L4 = [], [], [], []
 
@@ -600,7 +620,7 @@ elif seccion == "💧 SoyBean Oil":
         
         # Merge y cálculo de error
         df_comp_L1 = pd.merge(df_exp_liq, df_res_L1, on='Componente')
-        df_comp_L1['% Error'] = abs(df_comp_L1['Viscosidad (cP)'] - df_comp_L1['Viscosidad Exp (cP)']) / df_comp_L1['Viscosidad Exp (cP)'] * 100
+        df_comp_L1['% Error'] = abs(df_comp_L1['Viscosidad Exp (cP)'] - df_comp_L1['Viscosidad (cP)']) / df_comp_L1['Viscosidad Exp (cP)'] * 100
         
         st.dataframe(df_comp_L1[['Componente', 'T_operacion (K)', 'Viscosidad Exp (cP)', 'Viscosidad (cP)', '% Error']].style.format({
             'Viscosidad Exp (cP)': "{:.4f}", 
@@ -642,6 +662,8 @@ elif seccion == "💧 SoyBean Oil":
     with tab_L2:
         st.subheader("Resultados Método Orrick & Erbar")
         st.dataframe(pd.DataFrame(resultados_L2).style.format({'Viscosidad (cP)': "{:.4f}"}), use_container_width=True)
+        
+        
         
     with tab_L3:
         st.subheader("Resultados Método Van Velzen")
