@@ -65,13 +65,14 @@ def modelo_3_sutherland(T, eta_0, T_0, S):
     viscosidad_Pa_s = eta_0 * ((T / T_0) ** 1.5) * ((T_0 + S) / (T + S))
     return viscosidad_Pa_s
 
-def modelo_4_criticos(T, M, T_c, P_c, V_c):
+def modelo_4_yoon_thodos(T, M, T_c, P_c_atm):
+    # Corrección estricta con la literatura (Yoon-Thodos)
+    P_c_pa = P_c_atm * 101325
     T_r = T / T_c
-    xi = (T_c ** (1/6)) / (math.sqrt(M) * (P_c ** (2/3)))
-    num_eta = (0.807 * (T_r ** 0.618)) - (0.357 * np.exp(-0.449 * T_r)) + (0.34 * np.exp(-4.058 * T_r)) + 0.018
-    eta_r = num_eta / xi
-    eta_uP = 10 * eta_r * (math.sqrt(M * T_c) / (V_c ** (2/3)))
-    return eta_uP * 1e-7, T_r, xi, eta_r, eta_uP
+    xi = 2173.424 * (T_c ** (1/6)) * (M ** -0.5) * (P_c_pa ** -(2/3))
+    termino = (46.10 * (T_r ** 0.618)) - (20.40 * np.exp(-0.449 * T_r)) + (19.40 * np.exp(-4.058 * T_r)) + 1
+    eta_pa_s = (termino / xi) * 1e-8
+    return eta_pa_s, T_r, xi
 
 def regla_mezcla_wilke(y_array, eta_array, M_array):
     n = len(y_array)
@@ -94,6 +95,49 @@ def regla_mezcla_wilke(y_array, eta_array, M_array):
         eta_mezcla += (y_array[i] * eta_array[i]) / suma_denominador
         
     return eta_mezcla, phi
+
+def regla_mezcla_herning_zipperer_detallado(y_array, eta_array, M_array):
+    n = len(y_array)
+    xi_raiz_m = np.zeros(n)
+    xi_eta_raiz_m = np.zeros(n)
+    
+    for i in range(n):
+        xi_raiz_m[i] = y_array[i] * math.sqrt(M_array[i])
+        xi_eta_raiz_m[i] = y_array[i] * eta_array[i] * math.sqrt(M_array[i])
+        
+    suma_num = np.sum(xi_eta_raiz_m)
+    suma_den = np.sum(xi_raiz_m)
+    eta_mezcla = suma_num / suma_den
+    return eta_mezcla, xi_raiz_m, xi_eta_raiz_m, suma_num, suma_den
+
+def generar_curva_viscosidad_T(modelo_nombre, y_array, M_array, df, regla='wilke'):
+    T_rango = np.linspace(250, 600, 30)
+    eta_mezcla_rango = []
+    
+    for t in T_rango:
+        eta_i_t = []
+        for idx, row in df.iterrows():
+            if "1" in modelo_nombre:
+                v, _, _ = modelo_1_chapman_enskog(t, row['M (g/mol)'], row['σ (Å)'], row['ε/k (K)'])
+            elif "2" in modelo_nombre:
+                v, _, _ = modelo_2_estados_correspondientes(t, row['M (g/mol)'], row['V_c (cm3/mol)'], row['T_c (K)'])
+            elif "3" in modelo_nombre:
+                v = modelo_3_sutherland(t, row['η_0 (Pa*s)'], row['T_0 (K)'], row['S (K)'])
+            elif "4" in modelo_nombre:
+                v, _, _ = modelo_4_yoon_thodos(t, row['M (g/mol)'], row['T_c (K)'], row['P_c (atm)'])
+            eta_i_t.append(v)
+            
+        eta_array_t = np.array(eta_i_t)
+        
+        if regla == 'wilke':
+            eta_m, _ = regla_mezcla_wilke(y_array, eta_array_t, M_array)
+        elif regla == 'hz':
+            eta_m, _, _, _, _ = regla_mezcla_herning_zipperer_detallado(y_array, eta_array_t, M_array)
+            
+        eta_mezcla_rango.append(eta_m)
+        
+    return T_rango, eta_mezcla_rango
+
 
 # ==========================================
 # 3. INTERFAZ: PANEL LATERAL DINÁMICO
@@ -140,10 +184,9 @@ for index, row in df_comp.iterrows():
     visc_m3_list.append(visc_m3)
     
     # M4
-    visc_m4, T_r_m4, xi, eta_r, eta_uP = modelo_4_criticos(t_val, row['M (g/mol)'], row['T_c (K)'], row['P_c (atm)'], row['V_c (cm3/mol)'])
-    resultados_m4_global.append({'Componente': comp, 'T (K)': t_val, 'T_r': round(T_r_m4, 4), 'ξ (Xi)': round(xi, 5), 'η_r': round(eta_r, 4), 'η (μP)': round(eta_uP, 2), 'Viscosidad Calc (Pa*s)': visc_m4})
+    visc_m4, T_r_m4, xi = modelo_4_yoon_thodos(t_val, row['M (g/mol)'], row['T_c (K)'], row['P_c (atm)'])
+    resultados_m4_global.append({'Componente': comp, 'T (K)': t_val, 'T_r': round(T_r_m4, 4), 'ξ (Xi)': round(xi, 6), 'Viscosidad Calc (Pa*s)': visc_m4})
     visc_m4_list.append(visc_m4)
-    
     st.sidebar.markdown("---")
 
 df_res_m1 = pd.DataFrame(resultados_m1_global)
@@ -304,28 +347,14 @@ with tab3:
 # --- PESTAÑA MODELO 4 ---
 with tab4:
     st.header("Resultados Modelo 4 (Yoon-Thodos)")
-    resultados_m4 = []
-    for index, row in df_comp.iterrows():
-        comp = row['Componente']
-        T_user = condiciones_usuario[comp]['T']
-        visc_Pa_s, T_r, xi, eta_r, eta_uP = modelo_4_criticos(T_user, row['M (g/mol)'], row['T_c (K)'], row['P_c (atm)'], row['V_c (cm3/mol)'])
-        resultados_m4.append({'Componente': comp, 'T (K)': T_user, 'T_r': round(T_r, 4), 'ξ (Xi)': round(xi, 5), 'η_r': round(eta_r, 4), 'η (μP)': round(eta_uP, 2), 'Viscosidad Calc (Pa*s)': visc_Pa_s})
-        
-    df_res_m4 = pd.DataFrame(resultados_m4)
     st.subheader("📋 Tabla de Resultados Calculados")
-    st.dataframe(df_res_m4.style.format({'Viscosidad Calc (Pa*s)': "{:.4e}"}), use_container_width=True)
+    st.dataframe(df_res_m4.style.format({'Viscosidad Calc (Pa*s)': "{:.4e}", 'ξ (Xi)': "{:.6e}"}), use_container_width=True)
 
     st.divider()
     st.subheader("📊 Comparación con Datos Experimentales")
     df_comparacion_m4 = pd.merge(df_exp, df_res_m4, on='Componente')
     df_comparacion_m4['% Error'] = abs(df_comparacion_m4['Viscosidad Calc (Pa*s)'] - df_comparacion_m4['Viscosidad Exp (Pa*s)']) / df_comparacion_m4['Viscosidad Exp (Pa*s)'] * 100
-    
-    # MOSTRAR LA TABLA DE COMPARACIÓN
-    st.dataframe(df_comparacion_m4[['Componente', 'T (K)', 'Viscosidad Exp (Pa*s)', 'Viscosidad Calc (Pa*s)', '% Error']].style.format({
-        'Viscosidad Exp (Pa*s)': "{:.4e}", 
-        'Viscosidad Calc (Pa*s)': "{:.4e}", 
-        '% Error': "{:.2f} %"
-    }), use_container_width=True)
+    st.dataframe(df_comparacion_m4[['Componente', 'T (K)', 'Viscosidad Exp (Pa*s)', 'Viscosidad Calc (Pa*s)', '% Error']].style.format({'Viscosidad Exp (Pa*s)': "{:.4e}", 'Viscosidad Calc (Pa*s)': "{:.4e}", '% Error': "{:.2f} %"}), use_container_width=True)
 
     y_true_m4 = df_comparacion_m4['Viscosidad Exp (Pa*s)']
     y_pred_m4 = df_comparacion_m4['Viscosidad Calc (Pa*s)']
@@ -380,6 +409,19 @@ with tab5:
         st.metric(label="Viscosidad de la Mezcla (η_m)", value=f"{viscosidad_mezcla_w:.4e} Pa*s")
         st.info(f"Suma de X_i original: **{suma_X:.6f}**\n\n*(Se normalizó a 1.0 automáticamente)*")
 
+        # GRÁFICA WILKE
+    st.divider()
+    st.subheader(f"📈 Comportamiento Térmico de la Mezcla ({modelo_seleccionado_wilke} + Wilke)")
+    T_plot_w, eta_plot_w = generar_curva_viscosidad_T(modelo_seleccionado_wilke, y_array, M_array, df_comp, regla='wilke')
+    
+    fig_w, ax_w = plt.subplots(figsize=(10, 4))
+    ax_w.plot(T_plot_w, eta_plot_w, color='crimson', linewidth=2.5, marker='o', markersize=4)
+    ax_w.set_xlabel('Temperatura (K)', fontweight='bold')
+    ax_w.set_ylabel('Viscosidad de Mezcla (Pa*s)', fontweight='bold')
+    ax_w.grid(True, linestyle='--', alpha=0.6)
+    st.pyplot(fig_w)
+
+
 # --- PESTAÑA MEZCLA HERNING-ZIPPERER (NUEVA) ---
 with tab6:
     st.header("🧪 Viscosidad de la Mezcla (Herning-Zipperer)")
@@ -429,3 +471,15 @@ with tab6:
         st.write(f"**Numerador | Σ(X_i * η_i * √M_i):** {suma_numerador:.4e}")
         st.write(f"**Denominador | Σ(X_i * √M_i):** {suma_denominador:.4f}")
         st.info(f"Suma parcial (X_i original): **{suma_X:.8f}**\n\n*(La normalización dividió cada X_i entre {suma_X:.8f})*")
+
+        # GRÁFICA HERNING-ZIPPERER
+    st.divider()
+    st.subheader(f"📈 Comportamiento Térmico de la Mezcla ({modelo_seleccionado_hz} + Herning-Zipperer)")
+    T_plot_hz, eta_plot_hz = generar_curva_viscosidad_T(modelo_seleccionado_hz, y_array, M_array, df_comp, regla='hz')
+    
+    fig_hz, ax_hz = plt.subplots(figsize=(10, 4))
+    ax_hz.plot(T_plot_hz, eta_plot_hz, color='darkcyan', linewidth=2.5, marker='s', markersize=4)
+    ax_hz.set_xlabel('Temperatura (K)', fontweight='bold')
+    ax_hz.set_ylabel('Viscosidad de Mezcla (Pa*s)', fontweight='bold')
+    ax_hz.grid(True, linestyle='--', alpha=0.6)
+    st.pyplot(fig_hz)
