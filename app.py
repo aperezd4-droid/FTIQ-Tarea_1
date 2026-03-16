@@ -16,14 +16,14 @@ st.title("🧪 Simulador de Viscosidad de Gases y Mezclas")
 datos_componentes = {
     'Componente': ['H2', 'CH4', 'CO', 'CO2', 'N2', 'C2H4', 'C2H6', 'C3H6', 'H2S'],
     'M (g/mol)': [2.016, 16.043, 28.01, 44.009, 28.014, 28.054, 30.07, 42.08, 34.081],
-    'σ (Å)': [2.827, 3.758, 3.69, 3.941, 3.798, 4.163, 4.443, 4.678, 3.623],
-    'ε/k (K)': [59.7, 148.6, 91.7, 195.2, 71.4, 224.7, 215.7, 298.9, 301.1],
+    'σ (Å)': [2.915, 3.78, 3.59, 3.996, 3.667, 4.228, 4.766, 4.678, 3.623],
+    'ε/k (K)': [38, 154, 110, 190, 99.8, 216, 275, 298.9, 301.1],
     'T_c (K)': [33.2, 190.6, 132.9, 304.2, 126.2, 282.3, 305.3, 365.0, 373.2],
     'P_c (atm)': [12.8, 45.4, 34.5, 72.8, 33.5, 49.7, 48.2, 45.6, 88.2], 
     'V_c (cm3/mol)': [65.0, 99.2, 93.2, 94.0, 89.9, 131.0, 148.0, 181.0, 98.5],
     'η_0 (Pa*s)': [0.00000876, 0.000011, 0.0000172, 0.0000148, 0.00001781, 0.0000092, 0.0000093, 0.0000083, 0.000012], 
     'T_0 (K)': [293.85, 300.0, 288.15, 293.15, 300.55, 300.0, 300.0, 300.0, 293.0], 
-    'S (K)': [72.0, 194.0, 118.0, 240.0, 111.0, 224.0, 222.0, 250.0, 300.0], 
+    'S (K)': [72.0, 198.0, 102.0, 240.0, 107.0, 226.0, 252.0, 298.0, 331.0], 
     'T_exp_default (K)': [323.13, 323.86, 300.0, 373.15, 323.15, 300.0, 323.15, 323.15, 323.96],
     'P_exp_default (MPa)': [1.69, 0.1, 0.05, 1.013, 1.50, 1.0, 1.013, 1.43, 0.05],
     'X_i_raw': [0.575, 0.25, 0.065, 0.015, 0.045, 0.0125, 0.0065, 0.00035, 0.00000016]
@@ -58,7 +58,7 @@ def modelo_2_estados_correspondientes(T, M, V_c, T_c):
     term2 = 0.357 * np.exp(-0.449 * T_r)
     term3 = 0.34 * np.exp(-4.058 * T_r)
     eta_star = term1 - term2 + term3 + 0.018
-    viscosidad_Pa_s = (4.0785e-6) * eta_star * (math.sqrt(M * T_c) / (V_c ** (2/3)))
+    viscosidad_Pa_s = (8.45e-7) * eta_star * (math.sqrt(M * T_c) / (V_c ** (2/3)))
     return viscosidad_Pa_s, eta_star, T_r
 
 def modelo_3_sutherland(T, eta_0, T_0, S):
@@ -94,12 +94,6 @@ def regla_mezcla_wilke(y_array, eta_array, M_array):
         eta_mezcla += (y_array[i] * eta_array[i]) / suma_denominador
         
     return eta_mezcla, phi
-
-def regla_mezcla_herning_zipperer(y_array, eta_array, M_array):
-    # Sin factor de corrección de temperatura
-    numerador = sum(y_array[i] * eta_array[i] * math.sqrt(M_array[i]) for i in range(len(y_array)))
-    denominador = sum(y_array[i] * math.sqrt(M_array[i]) for i in range(len(y_array)))
-    return numerador / denominador
 
 # ==========================================
 # 3. INTERFAZ: PANEL LATERAL DINÁMICO
@@ -389,7 +383,7 @@ with tab5:
 # --- PESTAÑA MEZCLA HERNING-ZIPPERER (NUEVA) ---
 with tab6:
     st.header("🧪 Viscosidad de la Mezcla (Herning-Zipperer)")
-    st.markdown("Método de Herning y Zipperer (sin factor de corrección de temperatura). Apropiado para mezclas de hidrocarburos ligeros y gases comunes.")
+    st.markdown("Cálculo detallado de la regla de mezcla de Herning y Zipperer, dividiendo el cálculo en los parámetros intermedios del numerador y denominador.")
     
     modelo_seleccionado_hz = st.selectbox(
         "Elige el modelo para las viscosidades puras (η_i):",
@@ -399,20 +393,39 @@ with tab6:
     
     viscosidades_base_hz = opciones_modelos[modelo_seleccionado_hz]
     
+    # 1 y 2. Construcción del DataFrame y asignación de viscosidad
     df_mezcla_hz = df_comp[['Componente', 'M (g/mol)', 'X_i_raw', 'y_i (Normalizado)']].copy()
     df_mezcla_hz['η_i_pura (Pa*s)'] = viscosidades_base_hz
     
+    # 3. Cálculo de los parámetros intermedios (Numerador y Denominador parciales)
+    df_mezcla_hz['X_i * √M_i'] = df_mezcla_hz['y_i (Normalizado)'] * np.sqrt(df_mezcla_hz['M (g/mol)'])
+    df_mezcla_hz['X_i * η_i * √M_i'] = df_mezcla_hz['y_i (Normalizado)'] * df_mezcla_hz['η_i_pura (Pa*s)'] * np.sqrt(df_mezcla_hz['M (g/mol)'])
+    
+    # 4. Sumatorias
+    suma_numerador = df_mezcla_hz['X_i * η_i * √M_i'].sum()
+    suma_denominador = df_mezcla_hz['X_i * √M_i'].sum()
+    
+    # 5. Viscosidad total
+    viscosidad_mezcla_hz = suma_numerador / suma_denominador
+    
     col1_hz, col2_hz = st.columns([2, 1])
+    
     with col1_hz:
-        st.subheader(f"📊 Composición y Viscosidades Puras ({modelo_seleccionado_hz})")
-        st.dataframe(df_mezcla_hz.style.format({'X_i_raw': "{:.8f}", 'y_i (Normalizado)': "{:.4f}", 'η_i_pura (Pa*s)': "{:.4e}"}), use_container_width=True)
-    
-    eta_array_hz = np.array(viscosidades_base_hz)
-    
-    viscosidad_mezcla_hz = regla_mezcla_herning_zipperer(y_array, eta_array_hz, M_array)
+        st.subheader("📊 Tabla de Parámetros Intermedios")
+        st.dataframe(df_mezcla_hz.style.format({
+            'X_i_raw': "{:.8f}", 
+            'y_i (Normalizado)': "{:.6f}", 
+            'η_i_pura (Pa*s)': "{:.4e}",
+            'X_i * √M_i': "{:.4f}",
+            'X_i * η_i * √M_i': "{:.4e}"
+        }), use_container_width=True)
     
     with col2_hz:
         st.markdown("<br><br>", unsafe_allow_html=True)
         st.success("🏁 **Resultado Final (Herning-Zipperer)**")
         st.metric(label="Viscosidad de la Mezcla (η_m)", value=f"{viscosidad_mezcla_hz:.4e} Pa*s")
-        st.info(f"Suma de X_i original: **{suma_X:.6f}**\n\n*(Se normalizó a 1.0 automáticamente)*")
+        st.divider()
+        st.markdown("**Sumatorias Totales:**")
+        st.write(f"**Numerador | Σ(X_i * η_i * √M_i):** {suma_numerador:.4e}")
+        st.write(f"**Denominador | Σ(X_i * √M_i):** {suma_denominador:.4f}")
+        st.info(f"Suma parcial (X_i original): **{suma_X:.8f}**\n\n*(La normalización dividió cada X_i entre {suma_X:.8f})*")
