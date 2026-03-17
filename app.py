@@ -8,12 +8,12 @@ import matplotlib.pyplot as plt
 # CONFIGURACIÓN DE LA PÁGINA
 # ==========================================
 st.set_page_config(page_title="Simulador de Viscosidad", layout="wide")
-st.title("🧪 Simulador de viscosidades de Coke Oven Gas & SoyBean Oil")
+st.title("🧪 Simulador de viscosidades de Coke Oven Gas y SoyBean Oil")
 
 # ======================================= ===
 # NAVEGACIÓN PRINCIPAL
 # ==========================================
-st.sidebar.title("🧭 Navegación")
+st.sidebar.title("Navegación")
 seccion = st.sidebar.radio("Selecciona la Mezcla:", ["💨 Cake Oven Gas", "💧 SoyBean Oil"])
 st.sidebar.markdown("---")
 
@@ -71,21 +71,28 @@ if seccion == "💨 Cake Oven Gas":
         viscosidad_uP = 26.69 * np.sqrt(M * T) / ((sigma ** 2) * omega_v)
         return viscosidad_uP * 1e-7, T_star, omega_v
 
-    def modelo_2_estados_correspondientes(T, M, V_c, T_c):
+    def modelo_2_estados_correspondientes(comp, T, M, P_c_atm, T_c):
+        P_c_bar = P_c_atm * 1.01325
         T_r = T / T_c
+        xi = 0.176 * ((T_c / ((M**3) * (P_c_bar**4))) ** (1/6))
         term1 = 0.807 * (T_r ** 0.618)
         term2 = 0.357 * np.exp(-0.449 * T_r)
-        term3 = 0.34 * np.exp(-4.058 * T_r)
-        eta_star = term1 - term2 + term3 + 0.018
-        viscosidad_Pa_s = (8.45e-7) * eta_star * (math.sqrt(M * T_c) / (V_c ** (2/3)))
-        return viscosidad_Pa_s, eta_star, T_r
+        term3 = 0.340 * np.exp(-4.058 * T_r)
+        eta_xi_base = term1 - term2 + term3 + 0.018
+        F_q = 1.0 # Para todos
+        F_p = 1.0 # Por defecto para todos
+        if comp == "H2S":
+            F_p = 1.0063
+        eta_xi = eta_xi_base * F_p * F_q
+        viscosidad_uP = eta_xi / xi        
+        viscosidad_Pa_s = viscosidad_uP * 1e-7
+        return viscosidad_Pa_s, xi, eta_xi, T_r
 
     def modelo_3_sutherland(T, eta_0, T_0, S):
         viscosidad_Pa_s = eta_0 * ((T / T_0) ** 1.5) * ((T_0 + S) / (T + S))
         return viscosidad_Pa_s
 
     def modelo_4_yoon_thodos(T, M, T_c, P_c_atm):
-        # Corrección estricta con la literatura (Yoon-Thodos)
         P_c_pa = P_c_atm * 101325
         T_r = T / T_c
         xi = 2173.424 * (T_c ** (1/6)) * (M ** -0.5) * (P_c_pa ** -(2/3))
@@ -192,9 +199,9 @@ if seccion == "💨 Cake Oven Gas":
         resultados_m1_global.append({'Componente': comp, 'T (K)': t_val, 'T*': round(T_star, 4), 'Ω_v': round(omega_v, 4), 'Viscosidad Calc (Pa*s)': visc_m1})
         visc_m1_list.append(visc_m1)
         
-        # M2
-        visc_m2, eta_star, T_r_m2 = modelo_2_estados_correspondientes(t_val, row['M (g/mol)'], row['V_c (cm3/mol)'], row['T_c (K)'])
-        resultados_m2_global.append({'Componente': comp, 'T (K)': t_val, 'T_r': round(T_r_m2, 4), 'η*': round(eta_star, 4), 'Viscosidad Calc (Pa*s)': visc_m2})
+        # M2: 
+        visc_m2, xi_m2, eta_star_m2, T_r_m2 = modelo_2_estados_correspondientes(comp, t_val, row['M (g/mol)'], row['P_c (atm)'], row['T_c (K)'])
+        resultados_m2_global.append({'Componente': comp, 'T (K)': t_val, 'T_r': round(T_r_m2, 4), 'η*ξ': round(eta_star_m2, 4), 'Viscosidad Calc (cP)': visc_m2})
         visc_m2_list.append(visc_m2)
         
         # M3
@@ -271,18 +278,31 @@ if seccion == "💨 Cake Oven Gas":
             st.metric(label="Coeficiente R²", value=f"{r2_score:.4f}")
             st.metric(label="Error Global (MAPE)", value=f"{np.mean(df_comparacion['% Error']):.2f} %")
 
-    # --- PESTAÑA MODELO 2 ---
+# --- PESTAÑA MODELO 2 ---
     with tab2:
-        st.header("Resultados Modelo 2 (Estados Correspondientes)")
+        st.header("Resultados Modelo 2 (Estados Correspondientes de Lucas)")
         resultados_m2 = []
         for index, row in df_comp.iterrows():
             comp = row['Componente']
             T_user = condiciones_usuario[comp]['T']
-            visc_Pa_s, eta_star, T_r = modelo_2_estados_correspondientes(T_user, row['M (g/mol)'], row['V_c (cm3/mol)'], row['T_c (K)'])
-            resultados_m2.append({'Componente': comp, 'T (K)': T_user, 'T_r': round(T_r, 4), 'η*': round(eta_star, 4), 'Viscosidad Calc (Pa*s)': visc_Pa_s})
+            
+            # Llamada a la función
+            visc_Pa_s, xi, eta_xi, T_r = modelo_2_estados_correspondientes(
+                comp, T_user, row['M (g/mol)'], row['P_c (atm)'], row['T_c (K)']
+            )
+            
+            resultados_m2.append({
+                'Componente': comp, 
+                'T (K)': T_user, 
+                'T_r': round(T_r, 4), 
+                'ξ (μP^-1)': round(xi, 6),
+                'η*ξ': round(eta_xi, 4), 
+                'Viscosidad Calc (Pa*s)': visc_Pa_s
+            })
             
         df_res_m2 = pd.DataFrame(resultados_m2)
         st.subheader("📋 Tabla de Resultados Calculados")
+        # Mostrar la tabla formateando la viscosidad en notación científica
         st.dataframe(df_res_m2.style.format({'Viscosidad Calc (Pa*s)': "{:.4e}"}), use_container_width=True)
 
         st.divider()
@@ -395,7 +415,7 @@ if seccion == "💨 Cake Oven Gas":
             st.metric(label="Coeficiente R²", value=f"{r2_score_m4:.4f}")
             st.metric(label="Error Global (MAPE)", value=f"{np.mean(df_comparacion_m4['% Error']):.2f} %")
 
-    # --- PESTAÑA MEZCLA WILKE (NUEVA) ---
+    # --- PESTAÑA MEZCLA WILKE  ---
     with tab5:
         st.header("⚗️ Viscosidad de la Mezcla (Regla de Wilke)")
         st.markdown("Cálculo basado en la matriz de interacción de Wilke (1950) para sistemas multicomponente.")
@@ -441,7 +461,7 @@ if seccion == "💨 Cake Oven Gas":
         st.pyplot(fig_w)
 
 
-    # --- PESTAÑA MEZCLA HERNING-ZIPPERER (NUEVA) ---
+    # --- PESTAÑA MEZCLA HERNING-ZIPPERER  ---
     with tab6:
         st.header("🧪 Viscosidad de la Mezcla (Herning-Zipperer)")
         st.markdown("Cálculo detallado de la regla de mezcla de Herning y Zipperer, dividiendo el cálculo en los parámetros intermedios del numerador y denominador.")
@@ -530,7 +550,7 @@ elif seccion == "💧 SoyBean Oil":
         'COOH': [1, 1, 1, 1, 1],
         'T_b (K)': [633.15, 638.15, 638.15, 624.6, 649.25],
         'T_exp_default (K)': [353.15, 353.15, 353.15, 353.15, 353.15],
-        'Peso (g)': [18.93, 53.67, 6.28, 15.64, 3.74] # Datos de tu Excel
+        'Peso (g)': [18.93, 53.67, 6.28, 15.64, 3.74]
     }
     df_liq = pd.DataFrame(datos_liquidos)
     
@@ -612,7 +632,7 @@ elif seccion == "💧 SoyBean Oil":
         st.sidebar.markdown("---")
         
     # ==========================================
-    # 4. PESTAÑAS Y TABLAS PARA LÍQUIDOS (¡FUERA DEL FOR LOOP!)
+    # 4. PESTAÑAS Y TABLAS PARA LÍQUIDOS 
     # ==========================================
     tab_L1, tab_L2, tab_L3, tab_L4, tab_L5, tab_L6 = st.tabs([
         "🔴 L1: Sastri-Rao", "🟠 L2: Orrick-Erbar", "🟡 L3: Van Velzen", "🟢 L4: Eyring", "🔵 L5: GRUNBERG AND NISSAN", "🟣 L6: KENDALL MONROE"
@@ -756,10 +776,10 @@ elif seccion == "💧 SoyBean Oil":
         st.markdown("**Regla de Mezclado:** Asumiendo parámetro de interacción $G_{ij} = 0$")
         st.latex(r"\ln \eta_m = \sum x_i \ln \eta_i \implies \eta_m = \exp \left( \sum x_i \ln \eta_i \right)")
         
-        # Input exclusivo para la mezcla (actualiza la gráfica y la tabla dinámicamente)
+        # Input exclusivo para la mezcla 
         T_mezcla = st.number_input("🌡️ Temperatura de la Mezcla (K)", value=353.15, step=1.0, key="t_mezcla_grunberg")
         
-        # 1. CÁLCULO DEL PUNTO ESPECÍFICO (Tabla)
+        # 1. CÁLCULO DEL PUNTO ESPECÍFICO 
         x_i_array = df_liq['x_i'].values
         v1_mix, v2_mix, v3_mix, v4_mix = [], [], [], []
         
@@ -792,7 +812,7 @@ elif seccion == "💧 SoyBean Oil":
             }), use_container_width=True)
             
         with col_grafica:
-            # 2. GENERACIÓN DE LA CURVA (Rango de -40K a +40K alrededor de la T elegida)
+            # 2. GENERACIÓN DE LA CURVA 
             T_range = np.linspace(T_mezcla - 40, T_mezcla + 40, 30)
             mix_curve_m1, mix_curve_m2, mix_curve_m3, mix_curve_m4 = [], [], [], []
             
@@ -840,14 +860,12 @@ elif seccion == "💧 SoyBean Oil":
         # Input exclusivo para la mezcla limitado a rango de líquidos
         T_mezcla_km = st.number_input(
             "🌡️ Temperatura de la Mezcla (K)", 
-            min_value=273.15, 
-            max_value=580.0, 
             value=353.15, 
             step=1.0, 
             key="t_mezcla_kendall"
         )
         
-        # 1. CÁLCULO DEL PUNTO ESPECÍFICO (Tabla)
+        # 1. CÁLCULO DEL PUNTO ESPECÍFICO 
         x_i_array = df_liq['x_i'].values
         v1_mix_km, v2_mix_km, v3_mix_km, v4_mix_km = [], [], [], []
         
@@ -886,7 +904,7 @@ elif seccion == "💧 SoyBean Oil":
             }), use_container_width=True)
             
         with col_grafica_km:
-            # 2. GENERACIÓN DE LA CURVA (Rango de -40K a +40K alrededor de la T elegida)
+            # 2. GENERACIÓN DE LA CURVA 
             T_range_km = np.linspace(T_mezcla_km - 40, T_mezcla_km + 40, 30)
             mix_curve_m1_km, mix_curve_m2_km, mix_curve_m3_km, mix_curve_m4_km = [], [], [], []
             
