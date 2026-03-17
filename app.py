@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 st.set_page_config(page_title="Simulador de Viscosidad", layout="wide")
 st.title("🧪 Simulador de viscosidades de Coke Oven Gas & SoyBean Oil")
 
-# ==========================================
+# ======================================= ===
 # NAVEGACIÓN PRINCIPAL
 # ==========================================
 st.sidebar.title("🧭 Navegación")
@@ -18,7 +18,13 @@ seccion = st.sidebar.radio("Selecciona la Mezcla:", ["💨 Cake Oven Gas", "💧
 st.sidebar.markdown("---")
 
 # =====================================================================
+# =====================================================================
+# =====================================================================
+# =====================================================================
 # 🟢 SECCIÓN 1: GASES (Tu código actual va aquí adentro)
+# =====================================================================
+# =====================================================================
+# =====================================================================
 # =====================================================================
 if seccion == "💨 Cake Oven Gas":
 
@@ -496,15 +502,21 @@ if seccion == "💨 Cake Oven Gas":
         ax_hz.grid(True, linestyle='--', alpha=0.6)
         st.pyplot(fig_hz)
 
+
+# =====================================================================
+# =====================================================================
+# =====================================================================
 # =====================================================================
 # 🔵 SECCIÓN 2: LÍQUIDOS
+# =====================================================================
+# =====================================================================
+# =====================================================================
 # =====================================================================
 elif seccion == "💧 SoyBean Oil":
     st.header("💧 Módulo de Viscosidad para Líquidos")
     st.info("Cálculo de viscosidad mediante métodos de Contribución de Grupos y Ecuación de Eyring.")
     
-    # 1. BASE DE DATOS DE LÍQUIDOS (Adaptada de tu Colab)
-    # Se agregaron las columnas Tb (K) y una T_operación por defecto (K)
+    # 1. BASE DE DATOS DE LÍQUIDOS
     datos_liquidos = {
         'Componente': ["Ácido Oleico", "Ácido Linoleico", "Ácido Linolénico", "Ácido Palmítico", "Ácido Esteárico"],
         'M (g/mol)': [282.46, 280.45, 278.43, 256.43, 284.48],
@@ -516,35 +528,21 @@ elif seccion == "💧 SoyBean Oil":
         'CH2': [14, 12, 10, 13, 15],
         'COOH': [1, 1, 1, 1, 1],
         'T_b (K)': [633.15, 638.15, 638.15, 624.6, 649.25],
-        'T_exp_default (K)': [353.15, 353.15, 353.15, 353.15, 353.15] # T operación inicial
+        'T_exp_default (K)': [353.15, 353.15, 353.15, 353.15, 353.15] 
     }
     df_liq = pd.DataFrame(datos_liquidos)
 
-    # ==========================================
-    # DATOS EXPERIMENTALES (LÍQUIDOS)
-    # ==========================================
-    datos_exp_liq = {
-        'Componente': ["Ácido Oleico", "Ácido Linoleico", "Ácido Linolénico", "Ácido Palmítico", "Ácido Esteárico"],
-        'Viscosidad Exp (cP)': [5.6, 4.57, 6.9, 5.8, 7.31]
-    }
-    df_exp_liq = pd.DataFrame(datos_exp_liq)
-
-    # 2. FUNCIONES DE LÍQUIDOS (Devuelven la viscosidad en cP)
+    # 2. FUNCIONES DE LÍQUIDOS
     def modelo_L1_sastri_rao(T, Tb, n_c, n_db, n_ch3, n_ch2, n_cooh):
-
         sum_delta_nb = (n_ch3 * 0.105) + (n_ch2 * 0.0) + (n_db * -0.005) + (n_cooh * 0.250)
         n_sastri = 0.2 + (n_cooh * 0.100) + (0.050 if n_c > 8 else 0.0)
-        
         tr = (T / Tb)
         f_termico = (3 - 2 * tr)**0.19
-        
         term_a = 1 - (f_termico / tr)
         term_b = 0.38 * f_termico * math.log(tr)
         ln_pvp = (4.5398 + 1.0309 * math.log(Tb)) * (term_a - term_b)
-        
         pvp = math.exp(ln_pvp)
         visc_sastri = sum_delta_nb * (pvp ** (-n_sastri))
-        
         return visc_sastri
     
     def modelo_L2_orrick_erbar(T, M, rho, n_c, n_db, n_cooh):
@@ -568,28 +566,29 @@ elif seccion == "💧 SoyBean Oil":
         visc_eyring = ((h * na / vol_molar) * math.exp(E_act / (r * T))) * 1000
         return visc_eyring
 
+    # ==========================================
     # 3. INTERFAZ: PANEL LATERAL DE LÍQUIDOS
+    # ==========================================
     st.sidebar.header("⚙️ Condiciones de Operación (Líquidos)")
-    st.sidebar.markdown("Ajusta la Temperatura de operación para cada ácido:")
-    # --- CÓDIGO PARA EL SIDEBAR ---
-    st.sidebar.markdown("### 🧪 Viscosidades Experimentales (cP)")
-        
-    # Entradas numéricas con los valores por defecto (value=...)
-    v_exp_oleico = st.sidebar.number_input("Ácido Oleico", value=5.60, step=0.1)
-    v_exp_linoleico = st.sidebar.number_input("Ácido Linoleico", value=4.90, step=0.1) # Cambia el 4.90 por tu valor
-    v_exp_linolenico = st.sidebar.number_input("Ácido Linolénico", value=4.10, step=0.1) # Cambia el 4.10 por tu valor
-    v_exp_palmitico = st.sidebar.number_input("Ácido Palmítico", value=6.20, step=0.1) # Cambia el 6.20 por tu valor
-    v_exp_estearico = st.sidebar.number_input("Ácido Esteárico", value=8.10, step=0.1) # Cambia el 8.10 por tu valor
-
-    # Agrupamos estas variables en una lista para usarla fácilmente en las tablas
-    viscosidades_exp = [v_exp_oleico, v_exp_linoleico, v_exp_linolenico, v_exp_palmitico, v_exp_estearico]
+    st.sidebar.markdown("Ajusta Temperatura y Viscosidad Experimental para cada ácido:")
 
     resultados_L1, resultados_L2, resultados_L3, resultados_L4 = [], [], [], []
+    viscosidades_exp = []
+
+    # Valores por defecto
+    v_exp_defaults = [5.60, 4.57, 6.90, 5.80, 7.31] 
 
     for index, row in df_liq.iterrows():
         comp = row['Componente']
-        # Solo pedimos la T de operación, la Tb ya está en la base de datos
-        t_val = st.sidebar.number_input(f"T (K) - {comp}", value=float(row['T_exp_default (K)']), step=1.0, key=f"t_liq_{comp}")
+        st.sidebar.markdown(f"**{comp}**")
+        
+        col1, col2 = st.sidebar.columns(2)
+        with col1:
+            t_val = st.sidebar.number_input("T (K)", value=float(row['T_exp_default (K)']), step=1.0, key=f"t_liq_{comp}")
+        with col2:
+            v_val = st.sidebar.number_input("Visc Exp (cP)", value=v_exp_defaults[index], step=0.1, key=f"v_exp_{comp}")
+            
+        viscosidades_exp.append(v_val)
         
         # Cálculos
         v_l1 = modelo_L1_sastri_rao(t_val, row['T_b (K)'], row['C_totales'], row['Dobles_Enlaces'], row['CH3'], row['CH2'], row['COOH'])
@@ -597,14 +596,17 @@ elif seccion == "💧 SoyBean Oil":
         v_l3 = modelo_L3_van_velzen(t_val, row['C_totales'], row['Dobles_Enlaces'], row['COOH'])
         v_l4 = modelo_L4_eyring(t_val, row['M (g/mol)'], row['Densidad (g/cm3)'], row['E_act (J/mol)'])
         
-        # Guardar en listas para las tablas
-        resultados_L1.append({'Componente': comp, 'T_operacion (K)': t_val, 'T_ebullicion (K)': row['T_b (K)'], 'Viscosidad (cP)': v_l1})
-        resultados_L2.append({'Componente': comp, 'T_operacion (K)': t_val, 'Viscosidad (cP)': v_l2})
-        resultados_L3.append({'Componente': comp, 'T_operacion (K)': t_val, 'Viscosidad (cP)': v_l3})
-        resultados_L4.append({'Componente': comp, 'T_operacion (K)': t_val, 'E_Activación (J/mol)': row['E_act (J/mol)'], 'Viscosidad (cP)': v_l4})
-
-    # 4. PESTAÑAS Y TABLAS PARA LÍQUIDOS
-    # Dejamos espacio para L5 y L6 como pediste
+        # Guardar resultados
+        resultados_L1.append({'Componente': comp, 'T_operacion (K)': t_val, 'T_ebullicion (K)': row['T_b (K)'], 'Viscosidad Calc (cP)': v_l1})
+        resultados_L2.append({'Componente': comp, 'T_operacion (K)': t_val, 'Viscosidad Calc (cP)': v_l2})
+        resultados_L3.append({'Componente': comp, 'T_operacion (K)': t_val, 'Viscosidad Calc (cP)': v_l3})
+        resultados_L4.append({'Componente': comp, 'T_operacion (K)': t_val, 'E_Activación (J/mol)': row['E_act (J/mol)'], 'Viscosidad Calc (cP)': v_l4})
+        
+        st.sidebar.markdown("---")
+        
+    # ==========================================
+    # 4. PESTAÑAS Y TABLAS PARA LÍQUIDOS (¡FUERA DEL FOR LOOP!)
+    # ==========================================
     tab_L1, tab_L2, tab_L3, tab_L4, tab_L5, tab_L6 = st.tabs([
         "🔴 L1: Sastri-Rao", "🟠 L2: Orrick-Erbar", "🟡 L3: Van Velzen", "🟢 L4: Eyring", "🔵 L5: (Vacío)", "🟣 L6: (Vacío)"
     ])
@@ -612,67 +614,135 @@ elif seccion == "💧 SoyBean Oil":
     # --- PESTAÑA L1: SASTRI-RAO ---
     with tab_L1:
         st.subheader("📋 Resultados Método Sastri-Rao")
-        df_res_L1 = pd.DataFrame(resultados_L1)
-        st.dataframe(df_res_L1.style.format({'Viscosidad (cP)': "{:.4f}"}), use_container_width=True)
+        df_comp_L1 = pd.DataFrame(resultados_L1)
+        df_comp_L1['Viscosidad Exp (cP)'] = viscosidades_exp
+        df_comp_L1['% Error'] = abs(df_comp_L1['Viscosidad Exp (cP)'] - df_comp_L1['Viscosidad Calc (cP)']) / df_comp_L1['Viscosidad Exp (cP)'] * 100
+        
+        st.dataframe(df_comp_L1[['Componente', 'T_operacion (K)', 'Viscosidad Exp (cP)', 'Viscosidad Calc (cP)', '% Error']].style.format({
+            'T_operacion (K)': "{:.2f}", 'Viscosidad Exp (cP)': "{:.4f}", 'Viscosidad Calc (cP)': "{:.4f}", '% Error': "{:.2f} %"
+        }), use_container_width=True)
         
         st.divider()
         st.subheader("📊 Comparación con Datos Experimentales")
         
-        # Merge y cálculo de error
-        df_comp_L1 = pd.merge(df_exp_liq, df_res_L1, on='Componente')
-        df_comp_L1['% Error'] = abs(df_comp_L1['Viscosidad Exp (cP)'] - df_comp_L1['Viscosidad (cP)']) / df_comp_L1['Viscosidad Exp (cP)'] * 100
+        y_true_L1, y_pred_L1 = df_comp_L1['Viscosidad Exp (cP)'], df_comp_L1['Viscosidad Calc (cP)']
+        ss_res_L1, ss_tot_L1 = np.sum((y_true_L1 - y_pred_L1)**2), np.sum((y_true_L1 - np.mean(y_true_L1))**2)
+        r2_L1 = 1 - (ss_res_L1 / ss_tot_L1) if ss_tot_L1 != 0 else 0
         
-        st.dataframe(df_comp_L1[['Componente', 'T_operacion (K)', 'Viscosidad Exp (cP)', 'Viscosidad (cP)', '% Error']].style.format({
-            'Viscosidad Exp (cP)': "{:.4f}", 
-            'Viscosidad (cP)': "{:.4f}", 
-            '% Error': "{:.2f} %"
-        }), use_container_width=True)
-        
-        # Cálculos de métricas globales
-        y_true_L1 = df_comp_L1['Viscosidad Exp (cP)']
-        y_pred_L1 = df_comp_L1['Viscosidad (cP)']
-        
-        # Validar que no haya división por cero en caso de varianza nula (solo precaución)
-        ss_res = np.sum((y_true_L1 - y_pred_L1) ** 2)
-        ss_tot = np.sum((y_true_L1 - np.mean(y_true_L1)) ** 2)
-        r2_score_L1 = 1 - (ss_res / ss_tot) if ss_tot != 0 else 0
-        
-        # Gráfica de Dispersión
         col_grafica_L1, col_metricas_L1 = st.columns([3, 1])
         with col_grafica_L1:
             fig_L1, ax_L1 = plt.subplots(figsize=(7, 5))
             ax_L1.scatter(y_true_L1, y_pred_L1, color='crimson', edgecolor='black', s=80, label='Predicción L1', zorder=3)
-            
-            # Línea ideal a 45 grados
-            min_val_L1 = min(y_true_L1.min(), y_pred_L1.min()) * 0.95
-            max_val_L1 = max(y_true_L1.max(), y_pred_L1.max()) * 1.05
-            ax_L1.plot([min_val_L1, max_val_L1], [min_val_L1, max_val_L1], color='black', linestyle='--', label='Ideal', zorder=2)
-            
-            ax_L1.set_xlabel('Viscosidad Experimental (cP)', fontweight='bold')
-            ax_L1.set_ylabel('Viscosidad Calculada (cP)', fontweight='bold')
+            min_v, max_v = min(y_true_L1.min(), y_pred_L1.min())*0.95, max(y_true_L1.max(), y_pred_L1.max())*1.05
+            ax_L1.plot([min_v, max_v], [min_v, max_v], 'k--', label='Ideal', zorder=2)
+            ax_L1.set(xlabel='Viscosidad Experimental (cP)', ylabel='Viscosidad Calculada (cP)')
             ax_L1.grid(True, linestyle=':', alpha=0.7)
             ax_L1.legend()
             st.pyplot(fig_L1)
-            
         with col_metricas_L1:
             st.markdown("<br><br>", unsafe_allow_html=True)
-            st.metric(label="Coeficiente R²", value=f"{r2_score_L1:.4f}")
+            st.metric(label="Coeficiente R²", value=f"{r2_L1:.4f}")
             st.metric(label="Error Global (MAPE)", value=f"{np.mean(df_comp_L1['% Error']):.2f} %")
-        
+
+    # --- PESTAÑA L2: ORRICK & ERBAR ---
     with tab_L2:
-        st.subheader("Resultados Método Orrick & Erbar")
-        st.dataframe(pd.DataFrame(resultados_L2).style.format({'Viscosidad (cP)': "{:.4f}"}), use_container_width=True)
+        st.subheader("📋 Resultados Método Orrick & Erbar")
+        df_comp_L2 = pd.DataFrame(resultados_L2)
+        df_comp_L2['Viscosidad Exp (cP)'] = viscosidades_exp
+        df_comp_L2['% Error'] = abs(df_comp_L2['Viscosidad Exp (cP)'] - df_comp_L2['Viscosidad Calc (cP)']) / df_comp_L2['Viscosidad Exp (cP)'] * 100
         
+        st.dataframe(df_comp_L2[['Componente', 'T_operacion (K)', 'Viscosidad Exp (cP)', 'Viscosidad Calc (cP)', '% Error']].style.format({
+            'T_operacion (K)': "{:.2f}", 'Viscosidad Exp (cP)': "{:.4f}", 'Viscosidad Calc (cP)': "{:.4f}", '% Error': "{:.2f} %"
+        }), use_container_width=True)
         
+        st.divider()
+        st.subheader("📊 Comparación con Datos Experimentales")
         
+        y_true_L2, y_pred_L2 = df_comp_L2['Viscosidad Exp (cP)'], df_comp_L2['Viscosidad Calc (cP)']
+        ss_res_L2, ss_tot_L2 = np.sum((y_true_L2 - y_pred_L2)**2), np.sum((y_true_L2 - np.mean(y_true_L2))**2)
+        r2_L2 = 1 - (ss_res_L2 / ss_tot_L2) if ss_tot_L2 != 0 else 0
+        
+        col_grafica_L2, col_metricas_L2 = st.columns([3, 1])
+        with col_grafica_L2:
+            fig_L2, ax_L2 = plt.subplots(figsize=(7, 5))
+            ax_L2.scatter(y_true_L2, y_pred_L2, color='darkorange', edgecolor='black', s=80, label='Predicción L2', zorder=3)
+            min_v, max_v = min(y_true_L2.min(), y_pred_L2.min())*0.95, max(y_true_L2.max(), y_pred_L2.max())*1.05
+            ax_L2.plot([min_v, max_v], [min_v, max_v], 'k--', label='Ideal', zorder=2)
+            ax_L2.set(xlabel='Viscosidad Experimental (cP)', ylabel='Viscosidad Calculada (cP)')
+            ax_L2.grid(True, linestyle=':', alpha=0.7)
+            ax_L2.legend()
+            st.pyplot(fig_L2)
+        with col_metricas_L2:
+            st.markdown("<br><br>", unsafe_allow_html=True)
+            st.metric(label="Coeficiente R²", value=f"{r2_L2:.4f}")
+            st.metric(label="Error Global (MAPE)", value=f"{np.mean(df_comp_L2['% Error']):.2f} %")
+
+    # --- PESTAÑA L3: VAN VELZEN ---
     with tab_L3:
-        st.subheader("Resultados Método Van Velzen")
-        st.dataframe(pd.DataFrame(resultados_L3).style.format({'Viscosidad (cP)': "{:.4f}"}), use_container_width=True)
+        st.subheader("📋 Resultados Método Van Velzen")
+        df_comp_L3 = pd.DataFrame(resultados_L3)
+        df_comp_L3['Viscosidad Exp (cP)'] = viscosidades_exp
+        df_comp_L3['% Error'] = abs(df_comp_L3['Viscosidad Exp (cP)'] - df_comp_L3['Viscosidad Calc (cP)']) / df_comp_L3['Viscosidad Exp (cP)'] * 100
         
+        st.dataframe(df_comp_L3[['Componente', 'T_operacion (K)', 'Viscosidad Exp (cP)', 'Viscosidad Calc (cP)', '% Error']].style.format({
+            'T_operacion (K)': "{:.2f}", 'Viscosidad Exp (cP)': "{:.4f}", 'Viscosidad Calc (cP)': "{:.4f}", '% Error': "{:.2f} %"
+        }), use_container_width=True)
+        
+        st.divider()
+        st.subheader("📊 Comparación con Datos Experimentales")
+        
+        y_true_L3, y_pred_L3 = df_comp_L3['Viscosidad Exp (cP)'], df_comp_L3['Viscosidad Calc (cP)']
+        ss_res_L3, ss_tot_L3 = np.sum((y_true_L3 - y_pred_L3)**2), np.sum((y_true_L3 - np.mean(y_true_L3))**2)
+        r2_L3 = 1 - (ss_res_L3 / ss_tot_L3) if ss_tot_L3 != 0 else 0
+        
+        col_grafica_L3, col_metricas_L3 = st.columns([3, 1])
+        with col_grafica_L3:
+            fig_L3, ax_L3 = plt.subplots(figsize=(7, 5))
+            ax_L3.scatter(y_true_L3, y_pred_L3, color='teal', edgecolor='black', s=80, label='Predicción L3', zorder=3)
+            min_v, max_v = min(y_true_L3.min(), y_pred_L3.min())*0.95, max(y_true_L3.max(), y_pred_L3.max())*1.05
+            ax_L3.plot([min_v, max_v], [min_v, max_v], 'k--', label='Ideal', zorder=2)
+            ax_L3.set(xlabel='Viscosidad Experimental (cP)', ylabel='Viscosidad Calculada (cP)')
+            ax_L3.grid(True, linestyle=':', alpha=0.7)
+            ax_L3.legend()
+            st.pyplot(fig_L3)
+        with col_metricas_L3:
+            st.markdown("<br><br>", unsafe_allow_html=True)
+            st.metric(label="Coeficiente R²", value=f"{r2_L3:.4f}")
+            st.metric(label="Error Global (MAPE)", value=f"{np.mean(df_comp_L3['% Error']):.2f} %")
+
+    # --- PESTAÑA L4: EYRING ---
     with tab_L4:
-        st.subheader("Resultados Ecuación de Eyring")
-        st.dataframe(pd.DataFrame(resultados_L4).style.format({'Viscosidad (cP)': "{:.4f}"}), use_container_width=True)
+        st.subheader("📋 Resultados Ecuación de Eyring")
+        df_comp_L4 = pd.DataFrame(resultados_L4)
+        df_comp_L4['Viscosidad Exp (cP)'] = viscosidades_exp
+        df_comp_L4['% Error'] = abs(df_comp_L4['Viscosidad Exp (cP)'] - df_comp_L4['Viscosidad Calc (cP)']) / df_comp_L4['Viscosidad Exp (cP)'] * 100
         
+        st.dataframe(df_comp_L4[['Componente', 'T_operacion (K)', 'E_Activación (J/mol)', 'Viscosidad Exp (cP)', 'Viscosidad Calc (cP)', '% Error']].style.format({
+            'T_operacion (K)': "{:.2f}", 'Viscosidad Exp (cP)': "{:.4f}", 'Viscosidad Calc (cP)': "{:.4f}", '% Error': "{:.2f} %"
+        }), use_container_width=True)
+        
+        st.divider()
+        st.subheader("📊 Comparación con Datos Experimentales")
+        
+        y_true_L4, y_pred_L4 = df_comp_L4['Viscosidad Exp (cP)'], df_comp_L4['Viscosidad Calc (cP)']
+        ss_res_L4, ss_tot_L4 = np.sum((y_true_L4 - y_pred_L4)**2), np.sum((y_true_L4 - np.mean(y_true_L4))**2)
+        r2_L4 = 1 - (ss_res_L4 / ss_tot_L4) if ss_tot_L4 != 0 else 0
+        
+        col_grafica_L4, col_metricas_L4 = st.columns([3, 1])
+        with col_grafica_L4:
+            fig_L4, ax_L4 = plt.subplots(figsize=(7, 5))
+            ax_L4.scatter(y_true_L4, y_pred_L4, color='forestgreen', edgecolor='black', s=80, label='Predicción L4', zorder=3)
+            min_v, max_v = min(y_true_L4.min(), y_pred_L4.min())*0.95, max(y_true_L4.max(), y_pred_L4.max())*1.05
+            ax_L4.plot([min_v, max_v], [min_v, max_v], 'k--', label='Ideal', zorder=2)
+            ax_L4.set(xlabel='Viscosidad Experimental (cP)', ylabel='Viscosidad Calculada (cP)')
+            ax_L4.grid(True, linestyle=':', alpha=0.7)
+            ax_L4.legend()
+            st.pyplot(fig_L4)
+        with col_metricas_L4:
+            st.markdown("<br><br>", unsafe_allow_html=True)
+            st.metric(label="Coeficiente R²", value=f"{r2_L4:.4f}")
+            st.metric(label="Error Global (MAPE)", value=f"{np.mean(df_comp_L4['% Error']):.2f} %")
+            
     with tab_L5:
         st.info("Esperando instrucciones para el Método 5 de líquidos...")
         
