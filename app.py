@@ -27,6 +27,7 @@ st.sidebar.markdown("---")
 # =====================================================================
 # =====================================================================
 if seccion == "💨 Cake Oven Gas":
+    st.info("Cálculo de viscosidad mediante métodos del libro de Poling y literatura externa")
 
     # ==========================================
     # 1. BASE DE DATOS (PROPIEDADES Y EXPERIMENTAL)
@@ -514,7 +515,7 @@ if seccion == "💨 Cake Oven Gas":
 # =====================================================================
 elif seccion == "💧 SoyBean Oil":
     st.header("💧 Módulo de Viscosidad para Líquidos")
-    st.info("Cálculo de viscosidad mediante métodos de Contribución de Grupos y Ecuación de Eyring.")
+    st.info("Cálculo de viscosidad mediante métodos del libro de Poling y literatura externa")
     
     # 1. BASE DE DATOS DE LÍQUIDOS
     datos_liquidos = {
@@ -528,9 +529,15 @@ elif seccion == "💧 SoyBean Oil":
         'CH2': [14, 12, 10, 13, 15],
         'COOH': [1, 1, 1, 1, 1],
         'T_b (K)': [633.15, 638.15, 638.15, 624.6, 649.25],
-        'T_exp_default (K)': [353.15, 353.15, 353.15, 353.15, 353.15] 
+        'T_exp_default (K)': [353.15, 353.15, 353.15, 353.15, 353.15],
+        'Peso (g)': [18.93, 53.67, 6.28, 15.64, 3.74] # Datos de tu Excel
     }
     df_liq = pd.DataFrame(datos_liquidos)
+    
+    # Cálculo de Moles y Fracción Molar (x_i)
+    df_liq['Moles'] = df_liq['Peso (g)'] / df_liq['M (g/mol)']
+    moles_totales = df_liq['Moles'].sum()
+    df_liq['x_i'] = df_liq['Moles'] / moles_totales
 
     # 2. FUNCIONES DE LÍQUIDOS
     def modelo_L1_sastri_rao(T, Tb, n_c, n_db, n_ch3, n_ch2, n_cooh):
@@ -608,7 +615,7 @@ elif seccion == "💧 SoyBean Oil":
     # 4. PESTAÑAS Y TABLAS PARA LÍQUIDOS (¡FUERA DEL FOR LOOP!)
     # ==========================================
     tab_L1, tab_L2, tab_L3, tab_L4, tab_L5, tab_L6 = st.tabs([
-        "🔴 L1: Sastri-Rao", "🟠 L2: Orrick-Erbar", "🟡 L3: Van Velzen", "🟢 L4: Eyring", "🔵 L5: (Vacío)", "🟣 L6: (Vacío)"
+        "🔴 L1: Sastri-Rao", "🟠 L2: Orrick-Erbar", "🟡 L3: Van Velzen", "🟢 L4: Eyring", "🔵 L5: GRUNBERG AND NISSAN", "🟣 L6: KENDALL MONROE"
     ])
 
     # --- PESTAÑA L1: SASTRI-RAO ---
@@ -743,8 +750,181 @@ elif seccion == "💧 SoyBean Oil":
             st.metric(label="Coeficiente R²", value=f"{r2_L4:.4f}")
             st.metric(label="Error Global (MAPE)", value=f"{np.mean(df_comp_L4['% Error']):.2f} %")
             
+# --- PESTAÑA L5: MEZCLA (GRUNBERG & NISSAN) ---
     with tab_L5:
-        st.info("Esperando instrucciones para el Método 5 de líquidos...")
+        st.subheader("🛢️ Método 5: Mezcla con Grunberg y Nissan (1949)")
+        st.markdown("**Regla de Mezclado:** Asumiendo parámetro de interacción $G_{ij} = 0$")
+        st.latex(r"\ln \eta_m = \sum x_i \ln \eta_i \implies \eta_m = \exp \left( \sum x_i \ln \eta_i \right)")
         
+        # Input exclusivo para la mezcla (actualiza la gráfica y la tabla dinámicamente)
+        T_mezcla = st.number_input("🌡️ Temperatura de la Mezcla (K)", value=353.15, step=1.0, key="t_mezcla_grunberg")
+        
+        # 1. CÁLCULO DEL PUNTO ESPECÍFICO (Tabla)
+        x_i_array = df_liq['x_i'].values
+        v1_mix, v2_mix, v3_mix, v4_mix = [], [], [], []
+        
+        # Calculamos la viscosidad de cada componente a la T_mezcla elegida
+        for index, row in df_liq.iterrows():
+            v1_mix.append(modelo_L1_sastri_rao(T_mezcla, row['T_b (K)'], row['C_totales'], row['Dobles_Enlaces'], row['CH3'], row['CH2'], row['COOH']))
+            v2_mix.append(modelo_L2_orrick_erbar(T_mezcla, row['M (g/mol)'], row['Densidad (g/cm3)'], row['C_totales'], row['Dobles_Enlaces'], row['COOH']))
+            v3_mix.append(modelo_L3_van_velzen(T_mezcla, row['C_totales'], row['Dobles_Enlaces'], row['COOH']))
+            v4_mix.append(modelo_L4_eyring(T_mezcla, row['M (g/mol)'], row['Densidad (g/cm3)'], row['E_act (J/mol)']))
+            
+        # Aplicamos Grunberg-Nissan
+        mezcla_M1 = np.exp(np.sum(x_i_array * np.log(v1_mix)))
+        mezcla_M2 = np.exp(np.sum(x_i_array * np.log(v2_mix)))
+        mezcla_M3 = np.exp(np.sum(x_i_array * np.log(v3_mix)))
+        mezcla_M4 = np.exp(np.sum(x_i_array * np.log(v4_mix)))
+        
+        df_mezcla = pd.DataFrame({
+            'Método Base': ['M1 (Sastri-Rao)', 'M2 (Orrick-Erbar)', 'M3 (Van Velzen)', 'M4 (Eyring)'],
+            'Temperatura (K)': [T_mezcla]*4,
+            'Viscosidad Mezcla (cP)': [mezcla_M1, mezcla_M2, mezcla_M3, mezcla_M4]
+        })
+        
+        col_tabla, col_grafica = st.columns([1, 1.5])
+        
+        with col_tabla:
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.dataframe(df_mezcla.style.format({
+                'Temperatura (K)': "{:.2f}",
+                'Viscosidad Mezcla (cP)': "{:.4f}"
+            }), use_container_width=True)
+            
+        with col_grafica:
+            # 2. GENERACIÓN DE LA CURVA (Rango de -40K a +40K alrededor de la T elegida)
+            T_range = np.linspace(T_mezcla - 40, T_mezcla + 40, 30)
+            mix_curve_m1, mix_curve_m2, mix_curve_m3, mix_curve_m4 = [], [], [], []
+            
+            # Calculamos toda la curva de viscosidad para la gráfica
+            for t in T_range:
+                v1_t, v2_t, v3_t, v4_t = [], [], [], []
+                for idx, row in df_liq.iterrows():
+                    v1_t.append(modelo_L1_sastri_rao(t, row['T_b (K)'], row['C_totales'], row['Dobles_Enlaces'], row['CH3'], row['CH2'], row['COOH']))
+                    v2_t.append(modelo_L2_orrick_erbar(t, row['M (g/mol)'], row['Densidad (g/cm3)'], row['C_totales'], row['Dobles_Enlaces'], row['COOH']))
+                    v3_t.append(modelo_L3_van_velzen(t, row['C_totales'], row['Dobles_Enlaces'], row['COOH']))
+                    v4_t.append(modelo_L4_eyring(t, row['M (g/mol)'], row['Densidad (g/cm3)'], row['E_act (J/mol)']))
+                
+                mix_curve_m1.append(np.exp(np.sum(x_i_array * np.log(v1_t))))
+                mix_curve_m2.append(np.exp(np.sum(x_i_array * np.log(v2_t))))
+                mix_curve_m3.append(np.exp(np.sum(x_i_array * np.log(v3_t))))
+                mix_curve_m4.append(np.exp(np.sum(x_i_array * np.log(v4_t))))
+                
+            fig_mix, ax_mix = plt.subplots(figsize=(7, 5))
+            
+            # Dibujar las curvas de tendencia
+            ax_mix.plot(T_range, mix_curve_m1, color='crimson', label='M1', linewidth=2)
+            ax_mix.plot(T_range, mix_curve_m2, color='darkorange', label='M2', linewidth=2)
+            ax_mix.plot(T_range, mix_curve_m3, color='teal', label='M3', linewidth=2)
+            ax_mix.plot(T_range, mix_curve_m4, color='forestgreen', label='M4', linewidth=2)
+            
+            # Dibujar los puntos exactos a la Temperatura elegida
+            ax_mix.scatter([T_mezcla]*4, [mezcla_M1, mezcla_M2, mezcla_M3, mezcla_M4], 
+                           color=['crimson', 'darkorange', 'teal', 'forestgreen'], s=100, zorder=5, edgecolor='black')
+                           
+            ax_mix.set_xlabel('Temperatura (K)', fontweight='bold')
+            ax_mix.set_ylabel('Viscosidad de Mezcla (cP)', fontweight='bold')
+            ax_mix.set_title('Comportamiento de la Mezcla vs Temperatura', fontweight='bold')
+            ax_mix.grid(True, linestyle=':', alpha=0.7)
+            ax_mix.legend()
+            
+            st.pyplot(fig_mix)
+
+
+# --- PESTAÑA L6: MEZCLA (KENDALL MONROE) ---
     with tab_L6:
-        st.info("Esperando instrucciones para el Método 6 de líquidos...")
+        st.subheader("🛢️ Método 6: Mezcla con Kendall y Monroe (1917)")
+        st.markdown("**Regla de Mezclado:** Basada en la raíz cúbica de las viscosidades puras")
+        st.latex(r"\eta_m^{1/3} = \sum x_i \eta_i^{1/3} \implies \eta_m = \left( \sum x_i \eta_i^{1/3} \right)^3")
+        
+        # Input exclusivo para la mezcla limitado a rango de líquidos
+        T_mezcla_km = st.number_input(
+            "🌡️ Temperatura de la Mezcla (K)", 
+            min_value=273.15, 
+            max_value=580.0, 
+            value=353.15, 
+            step=1.0, 
+            key="t_mezcla_kendall"
+        )
+        
+        # 1. CÁLCULO DEL PUNTO ESPECÍFICO (Tabla)
+        x_i_array = df_liq['x_i'].values
+        v1_mix_km, v2_mix_km, v3_mix_km, v4_mix_km = [], [], [], []
+        
+        # Calculamos la viscosidad de cada componente a la T_mezcla elegida
+        for index, row in df_liq.iterrows():
+            v1_mix_km.append(modelo_L1_sastri_rao(T_mezcla_km, row['T_b (K)'], row['C_totales'], row['Dobles_Enlaces'], row['CH3'], row['CH2'], row['COOH']))
+            v2_mix_km.append(modelo_L2_orrick_erbar(T_mezcla_km, row['M (g/mol)'], row['Densidad (g/cm3)'], row['C_totales'], row['Dobles_Enlaces'], row['COOH']))
+            v3_mix_km.append(modelo_L3_van_velzen(T_mezcla_km, row['C_totales'], row['Dobles_Enlaces'], row['COOH']))
+            v4_mix_km.append(modelo_L4_eyring(T_mezcla_km, row['M (g/mol)'], row['Densidad (g/cm3)'], row['E_act (J/mol)']))
+            
+        # Convertir a arrays de numpy para hacer las operaciones de raíz cúbica
+        v1_mix_km = np.array(v1_mix_km)
+        v2_mix_km = np.array(v2_mix_km)
+        v3_mix_km = np.array(v3_mix_km)
+        v4_mix_km = np.array(v4_mix_km)
+            
+        # Aplicamos Kendall-Monroe: Sumatoria de (xi * visc^(1/3)) y todo eso elevado al cubo
+        mezcla_M1_km = (np.sum(x_i_array * (v1_mix_km ** (1/3)))) ** 3
+        mezcla_M2_km = (np.sum(x_i_array * (v2_mix_km ** (1/3)))) ** 3
+        mezcla_M3_km = (np.sum(x_i_array * (v3_mix_km ** (1/3)))) ** 3
+        mezcla_M4_km = (np.sum(x_i_array * (v4_mix_km ** (1/3)))) ** 3
+        
+        df_mezcla_km = pd.DataFrame({
+            'Método Base': ['M1 (Sastri-Rao)', 'M2 (Orrick-Erbar)', 'M3 (Van Velzen)', 'M4 (Eyring)'],
+            'Temperatura (K)': [T_mezcla_km]*4,
+            'Viscosidad Mezcla (cP)': [mezcla_M1_km, mezcla_M2_km, mezcla_M3_km, mezcla_M4_km]
+        })
+        
+        col_tabla_km, col_grafica_km = st.columns([1, 1.5])
+        
+        with col_tabla_km:
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.dataframe(df_mezcla_km.style.format({
+                'Temperatura (K)': "{:.2f}",
+                'Viscosidad Mezcla (cP)': "{:.4f}"
+            }), use_container_width=True)
+            
+        with col_grafica_km:
+            # 2. GENERACIÓN DE LA CURVA (Rango de -40K a +40K alrededor de la T elegida)
+            T_range_km = np.linspace(T_mezcla_km - 40, T_mezcla_km + 40, 30)
+            mix_curve_m1_km, mix_curve_m2_km, mix_curve_m3_km, mix_curve_m4_km = [], [], [], []
+            
+            # Calculamos toda la curva de viscosidad para la gráfica
+            for t in T_range_km:
+                v1_t, v2_t, v3_t, v4_t = [], [], [], []
+                for idx, row in df_liq.iterrows():
+                    v1_t.append(modelo_L1_sastri_rao(t, row['T_b (K)'], row['C_totales'], row['Dobles_Enlaces'], row['CH3'], row['CH2'], row['COOH']))
+                    v2_t.append(modelo_L2_orrick_erbar(t, row['M (g/mol)'], row['Densidad (g/cm3)'], row['C_totales'], row['Dobles_Enlaces'], row['COOH']))
+                    v3_t.append(modelo_L3_van_velzen(t, row['C_totales'], row['Dobles_Enlaces'], row['COOH']))
+                    v4_t.append(modelo_L4_eyring(t, row['M (g/mol)'], row['Densidad (g/cm3)'], row['E_act (J/mol)']))
+                
+                v1_t = np.array(v1_t)
+                v2_t = np.array(v2_t)
+                v3_t = np.array(v3_t)
+                v4_t = np.array(v4_t)
+                
+                mix_curve_m1_km.append((np.sum(x_i_array * (v1_t ** (1/3)))) ** 3)
+                mix_curve_m2_km.append((np.sum(x_i_array * (v2_t ** (1/3)))) ** 3)
+                mix_curve_m3_km.append((np.sum(x_i_array * (v3_t ** (1/3)))) ** 3)
+                mix_curve_m4_km.append((np.sum(x_i_array * (v4_t ** (1/3)))) ** 3)
+                
+            fig_mix_km, ax_mix_km = plt.subplots(figsize=(7, 5))
+            
+            # Dibujar las curvas de tendencia
+            ax_mix_km.plot(T_range_km, mix_curve_m1_km, color='crimson', label='M1', linewidth=2)
+            ax_mix_km.plot(T_range_km, mix_curve_m2_km, color='darkorange', label='M2', linewidth=2)
+            ax_mix_km.plot(T_range_km, mix_curve_m3_km, color='teal', label='M3', linewidth=2)
+            ax_mix_km.plot(T_range_km, mix_curve_m4_km, color='forestgreen', label='M4', linewidth=2)
+            
+            # Dibujar los puntos exactos a la Temperatura elegida
+            ax_mix_km.scatter([T_mezcla_km]*4, [mezcla_M1_km, mezcla_M2_km, mezcla_M3_km, mezcla_M4_km], 
+                           color=['crimson', 'darkorange', 'teal', 'forestgreen'], s=100, zorder=5, edgecolor='black')
+                           
+            ax_mix_km.set_xlabel('Temperatura (K)', fontweight='bold')
+            ax_mix_km.set_ylabel('Viscosidad de Mezcla (cP)', fontweight='bold')
+            ax_mix_km.set_title('Kendall-Monroe: Mezcla vs Temperatura', fontweight='bold')
+            ax_mix_km.grid(True, linestyle=':', alpha=0.7)
+            ax_mix_km.legend()
+            
+            st.pyplot(fig_mix_km)
