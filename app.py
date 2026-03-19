@@ -276,15 +276,17 @@ if seccion == "💨 Cake Oven Gas":
         
         col_grafica, col_metricas = st.columns([3, 1])
         with col_grafica:
-            fig, ax = plt.subplots(figsize=(7, 5))
-            ax.scatter(y_true, y_pred, color='dodgerblue', edgecolor='black', s=80, label='Predicción M1', zorder=3)
-            min_val, max_val = min(y_true.min(), y_pred.min()), max(y_true.max(), y_pred.max())
-            ax.plot([min_val, max_val], [min_val, max_val], color='red', linestyle='--', label='Ideal', zorder=2)
-            ax.set_xlabel('Viscosidad Experimental (Pa*s)', fontweight='bold')
-            ax.set_ylabel('Viscosidad Modelo 1 (Pa*s)', fontweight='bold')
-            ax.grid(True, linestyle=':', alpha=0.7)
-            ax.legend()
-            st.pyplot(fig)
+            with plt.style.context('default'):
+                fig, ax = plt.subplots(figsize=(7, 5))
+                ax.scatter(y_true, y_pred, color='dodgerblue', edgecolor='black', s=80, label='Predicción M1', zorder=3)
+                min_val, max_val = min(y_true.min(), y_pred.min()), max(y_true.max(), y_pred.max())
+                ax.plot([min_val, max_val], [min_val, max_val], color='red', linestyle='--', label='Ideal', zorder=2)
+                ax.set_xlabel('Viscosidad Experimental (Pa*s)', fontweight='bold', color='black')
+                ax.set_ylabel('Viscosidad Modelo 1 (Pa*s)', fontweight='bold', color='black')
+                ax.grid(True, linestyle=':', alpha=0.7, color='black')
+                ax.tick_params(colors='black')
+                ax.legend()
+                st.pyplot(fig)
         with col_metricas:
             st.markdown("<br><br>", unsafe_allow_html=True)
             st.metric(label="Coeficiente R²", value=f"{r2_score:.4f}")
@@ -335,15 +337,16 @@ if seccion == "💨 Cake Oven Gas":
 
         col_grafica_m2, col_metricas_m2 = st.columns([3, 1])
         with col_grafica_m2:
-            fig2, ax2 = plt.subplots(figsize=(7, 5))
-            ax2.scatter(y_true_m2, y_pred_m2, color='mediumseagreen', edgecolor='black', s=80, label='Predicción M2', zorder=3)
-            min_val_m2, max_val_m2 = min(y_true_m2.min(), y_pred_m2.min()), max(y_true_m2.max(), y_pred_m2.max())
-            ax2.plot([min_val_m2, max_val_m2], [min_val_m2, max_val_m2], color='red', linestyle='--', label='Ideal', zorder=2)
-            ax2.set_xlabel('Viscosidad Experimental (Pa*s)', fontweight='bold')
-            ax2.set_ylabel('Viscosidad Modelo 2 (Pa*s)', fontweight='bold')
-            ax2.grid(True, linestyle=':', alpha=0.7)
-            ax2.legend()
-            st.pyplot(fig2)
+            with plt.style.context('default'):
+                fig2, ax2 = plt.subplots(figsize=(7, 5))
+                ax2.scatter(y_true_m2, y_pred_m2, color='mediumseagreen', edgecolor='black', s=80, label='Predicción M2', zorder=3)
+                min_val_m2, max_val_m2 = min(y_true_m2.min(), y_pred_m2.min()), max(y_true_m2.max(), y_pred_m2.max())
+                ax2.plot([min_val_m2, max_val_m2], [min_val_m2, max_val_m2], color='red', linestyle='--', label='Ideal', zorder=2)
+                ax2.set_xlabel('Viscosidad Experimental (Pa*s)', fontweight='bold')
+                ax2.set_ylabel('Viscosidad Modelo 2 (Pa*s)', fontweight='bold')
+                ax2.grid(True, linestyle=':', alpha=0.7)
+                ax2.legend()
+                st.pyplot(fig2)
         with col_metricas_m2:
             st.markdown("<br><br>", unsafe_allow_html=True)
             st.metric(label="Coeficiente R²", value=f"{r2_score_m2:.4f}")
@@ -381,15 +384,16 @@ if seccion == "💨 Cake Oven Gas":
 
         col_grafica_m3, col_metricas_m3 = st.columns([3, 1])
         with col_grafica_m3:
-            fig3, ax3 = plt.subplots(figsize=(7, 5))
-            ax3.scatter(y_true_m3, y_pred_m3, color='darkorange', edgecolor='black', s=80, label='Predicción M3', zorder=3)
-            min_val_m3, max_val_m3 = min(y_true_m3.min(), y_pred_m3.min()), max(y_true_m3.max(), y_pred_m3.max())
-            ax3.plot([min_val_m3, max_val_m3], [min_val_m3, max_val_m3], color='red', linestyle='--', label='Ideal', zorder=2)
-            ax3.set_xlabel('Viscosidad Experimental (Pa*s)', fontweight='bold')
-            ax3.set_ylabel('Viscosidad Modelo 3 (Pa*s)', fontweight='bold')
-            ax3.grid(True, linestyle=':', alpha=0.7)
-            ax3.legend()
-            st.pyplot(fig3)
+            with plt.style.context('default'):
+                fig3, ax3 = plt.subplots(figsize=(7, 5))
+                ax3.scatter(y_true_m3, y_pred_m3, color='darkorange', edgecolor='black', s=80, label='Predicción M3', zorder=3)
+                min_val_m3, max_val_m3 = min(y_true_m3.min(), y_pred_m3.min()), max(y_true_m3.max(), y_pred_m3.max())
+                ax3.plot([min_val_m3, max_val_m3], [min_val_m3, max_val_m3], color='red', linestyle='--', label='Ideal', zorder=2)
+                ax3.set_xlabel('Viscosidad Experimental (Pa*s)', fontweight='bold')
+                ax3.set_ylabel('Viscosidad Modelo 3 (Pa*s)', fontweight='bold')
+                ax3.grid(True, linestyle=':', alpha=0.7)
+                ax3.legend()
+                st.pyplot(fig3)
         with col_metricas_m3:
             st.markdown("<br><br>", unsafe_allow_html=True)
             st.metric(label="Coeficiente R²", value=f"{r2_score_m3:.4f}")
@@ -413,15 +417,16 @@ if seccion == "💨 Cake Oven Gas":
 
         col_grafica_m4, col_metricas_m4 = st.columns([3, 1])
         with col_grafica_m4:
-            fig4, ax4 = plt.subplots(figsize=(7, 5))
-            ax4.scatter(y_true_m4, y_pred_m4, color='mediumpurple', edgecolor='black', s=80, label='Predicción M4', zorder=3)
-            min_val_m4, max_val_m4 = min(y_true_m4.min(), y_pred_m4.min()), max(y_true_m4.max(), y_pred_m4.max())
-            ax4.plot([min_val_m4, max_val_m4], [min_val_m4, max_val_m4], color='red', linestyle='--', label='Ideal', zorder=2)
-            ax4.set_xlabel('Viscosidad Experimental (Pa*s)', fontweight='bold')
-            ax4.set_ylabel('Viscosidad Modelo 4 (Pa*s)', fontweight='bold')
-            ax4.grid(True, linestyle=':', alpha=0.7)
-            ax4.legend()
-            st.pyplot(fig4)
+            with plt.style.context('default'):
+                fig4, ax4 = plt.subplots(figsize=(7, 5))
+                ax4.scatter(y_true_m4, y_pred_m4, color='mediumpurple', edgecolor='black', s=80, label='Predicción M4', zorder=3)
+                min_val_m4, max_val_m4 = min(y_true_m4.min(), y_pred_m4.min()), max(y_true_m4.max(), y_pred_m4.max())
+                ax4.plot([min_val_m4, max_val_m4], [min_val_m4, max_val_m4], color='red', linestyle='--', label='Ideal', zorder=2)
+                ax4.set_xlabel('Viscosidad Experimental (Pa*s)', fontweight='bold')
+                ax4.set_ylabel('Viscosidad Modelo 4 (Pa*s)', fontweight='bold')
+                ax4.grid(True, linestyle=':', alpha=0.7)
+                ax4.legend()
+                st.pyplot(fig4)
         with col_metricas_m4:
             st.markdown("<br><br>", unsafe_allow_html=True)
             st.metric(label="Coeficiente R²", value=f"{r2_score_m4:.4f}")
@@ -464,43 +469,32 @@ if seccion == "💨 Cake Oven Gas":
         st.divider()
         st.subheader("📈 Comportamiento de la Mezcla vs Temperatura (Wilke)")
         
-        # Llamamos a la nueva función que calcula los 4 modelos
         T_plot_w, eta_plot_dict_w = generar_curva_viscosidad_T_todos_modelos(y_array, M_array, df_comp, regla='wilke')
         
-        # Obtenemos un T representativo para poner el "Punto Gigante" (ej. T_exp_default del H2 que es el mayoritario)
         T_punto = df_comp.loc[0, 'T_exp_default (K)'] 
         
-        # Estilo oscuro
-        plt.style.use('dark_background')
-        fig_w, ax_w = plt.subplots(figsize=(10, 5))
-        
-        # Colores idénticos a tu imagen
-        colores = {'M1': '#e63946', 'M2': '#f4a261', 'M3': '#2a9d8f', 'M4': '#2b9348'}
-        
-        for modelo_nombre, eta_plot in eta_plot_dict_w.items():
-            # 1. Graficamos la línea suave (sin markers)
-            ax_w.plot(T_plot_w, eta_plot, color=colores[modelo_nombre], linewidth=2.5, label=modelo_nombre)
+        with plt.style.context('default'):
             
-            # 2. Interpolar el valor Y en T_punto para poner el marcador gigante
-            eta_punto = np.interp(T_punto, T_plot_w, eta_plot)
-            ax_w.plot(T_punto, eta_punto, marker='o', markersize=12, color=colores[modelo_nombre], markeredgecolor='black', markeredgewidth=1.5, zorder=5)
+            fig_w, ax_w = plt.subplots(figsize=(10, 5))
+            
+            colores = {'M1': '#e63946', 'M2': '#f4a261', 'M3': '#2a9d8f', 'M4': '#2b9348'}
+            
+            for modelo_nombre, eta_plot in eta_plot_dict_w.items():
+                ax_w.plot(T_plot_w, eta_plot, color=colores[modelo_nombre], linewidth=2.5, label=modelo_nombre)
+                
+                eta_punto = np.interp(T_punto, T_plot_w, eta_plot)
+                ax_w.plot(T_punto, eta_punto, marker='o', markersize=12, color=colores[modelo_nombre], markeredgecolor='black', markeredgewidth=1.5, zorder=5)
 
-        # Configuración visual
-        ax_w.set_title("Comportamiento de la Mezcla vs Temperatura", fontweight='bold', fontsize=14, color='white')
-        ax_w.set_xlabel('Temperatura (K)', fontweight='bold', fontsize=12, color='white')
-        ax_w.set_ylabel('Viscosidad de Mezcla (Pa*s)', fontweight='bold', fontsize=12, color='white')
-        
-        # Cuadrícula clara estilo tu imagen
-        ax_w.grid(True, linestyle=':', alpha=0.4, color='white')
-        
-        # Leyenda fondo blanco letra negra
-        legend = ax_w.legend(loc='upper right', frameon=True, facecolor='white', edgecolor='black', labelcolor='black')
-        
-        # Hacer el fondo de la figura y del eje transparentes o negros para q cuadre con el dark mode
-        fig_w.patch.set_facecolor('#0e1117') 
-        ax_w.set_facecolor('#0e1117')
-        
-        st.pyplot(fig_w)
+            ax_w.set_title("Comportamiento de la Mezcla vs Temperatura", fontweight='bold', fontsize=14)
+            ax_w.set_xlabel('Temperatura (K)', fontweight='bold', fontsize=12)
+            ax_w.set_ylabel('Viscosidad de Mezcla (Pa*s)', fontweight='bold', fontsize=12)
+            
+            ax_w.grid(True, linestyle=':', alpha=0.4)
+            
+            legend = ax_w.legend(loc='upper right', frameon=True, facecolor='white', edgecolor='black', labelcolor='black')
+            
+            
+            st.pyplot(fig_w)
 
 
     # --- PESTAÑA MEZCLA HERNING-ZIPPERER  ---
@@ -557,33 +551,30 @@ if seccion == "💨 Cake Oven Gas":
         st.divider()
         st.subheader("📈 Comportamiento de la Mezcla vs Temperatura (Herning-Zipperer)")
         
-        # Llamamos a la nueva función que calcula los 4 modelos, pero con la regla 'hz'
         T_plot_hz, eta_plot_dict_hz = generar_curva_viscosidad_T_todos_modelos(y_array, M_array, df_comp, regla='hz')
         
         T_punto = df_comp.loc[0, 'T_exp_default (K)'] 
         
-        plt.style.use('dark_background')
-        fig_hz, ax_hz = plt.subplots(figsize=(10, 5))
-        colores = {'M1': '#e63946', 'M2': '#f4a261', 'M3': '#2a9d8f', 'M4': '#2b9348'}
-        
-        for modelo_nombre, eta_plot in eta_plot_dict_hz.items():
-            ax_hz.plot(T_plot_hz, eta_plot, color=colores[modelo_nombre], linewidth=2.5, label=modelo_nombre)
+        with plt.style.context('default'):
+            fig_hz, ax_hz = plt.subplots(figsize=(10, 5))
+            colores = {'M1': '#e63946', 'M2': '#f4a261', 'M3': '#2a9d8f', 'M4': '#2b9348'}
             
-            eta_punto = np.interp(T_punto, T_plot_hz, eta_plot)
-            ax_hz.plot(T_punto, eta_punto, marker='o', markersize=12, color=colores[modelo_nombre], markeredgecolor='black', markeredgewidth=1.5, zorder=5)
+            for modelo_nombre, eta_plot in eta_plot_dict_hz.items():
+                ax_hz.plot(T_plot_hz, eta_plot, color=colores[modelo_nombre], linewidth=2.5, label=modelo_nombre)
+                
+                eta_punto = np.interp(T_punto, T_plot_hz, eta_plot)
+                ax_hz.plot(T_punto, eta_punto, marker='o', markersize=12, color=colores[modelo_nombre], markeredgecolor='black', markeredgewidth=1.5, zorder=5)
 
-        ax_hz.set_title("Comportamiento de la Mezcla vs Temperatura", fontweight='bold', fontsize=14, color='white')
-        ax_hz.set_xlabel('Temperatura (K)', fontweight='bold', fontsize=12, color='white')
-        ax_hz.set_ylabel('Viscosidad de Mezcla (Pa*s)', fontweight='bold', fontsize=12, color='white')
-        ax_hz.grid(True, linestyle=':', alpha=0.4, color='white')
-        
-        legend = ax_hz.legend(loc='upper right', frameon=True, facecolor='white', edgecolor='black', labelcolor='black')
-        
-        fig_hz.patch.set_facecolor('#0e1117') 
-        ax_hz.set_facecolor('#0e1117')
-        
-        st.pyplot(fig_hz)
-        
+            ax_hz.set_title("Comportamiento de la Mezcla vs Temperatura", fontweight='bold', fontsize=14)
+            ax_hz.set_xlabel('Temperatura (K)', fontweight='bold', fontsize=12)
+            ax_hz.set_ylabel('Viscosidad de Mezcla (Pa*s)', fontweight='bold', fontsize=12)
+            
+            ax_hz.grid(True, linestyle=':', alpha=0.7)
+            
+            ax_hz.legend(loc='upper right', frameon=True, edgecolor='black')
+            
+            
+            st.pyplot(fig_hz)
 
 
 # =====================================================================
@@ -720,14 +711,15 @@ elif seccion == "💧 SoyBean Oil":
         
         col_grafica_L1, col_metricas_L1 = st.columns([3, 1])
         with col_grafica_L1:
-            fig_L1, ax_L1 = plt.subplots(figsize=(7, 5))
-            ax_L1.scatter(y_true_L1, y_pred_L1, color='crimson', edgecolor='black', s=80, label='Predicción L1', zorder=3)
-            min_v, max_v = min(y_true_L1.min(), y_pred_L1.min())*0.95, max(y_true_L1.max(), y_pred_L1.max())*1.05
-            ax_L1.plot([min_v, max_v], [min_v, max_v], 'k--', label='Ideal', zorder=2)
-            ax_L1.set(xlabel='Viscosidad Experimental (cP)', ylabel='Viscosidad Calculada (cP)')
-            ax_L1.grid(True, linestyle=':', alpha=0.7)
-            ax_L1.legend()
-            st.pyplot(fig_L1)
+            with plt.style.context('default'):
+                fig_L1, ax_L1 = plt.subplots(figsize=(7, 5))
+                ax_L1.scatter(y_true_L1, y_pred_L1, color='crimson', edgecolor='black', s=80, label='Predicción L1', zorder=3)
+                min_v, max_v = min(y_true_L1.min(), y_pred_L1.min())*0.95, max(y_true_L1.max(), y_pred_L1.max())*1.05
+                ax_L1.plot([min_v, max_v], [min_v, max_v], 'k--', label='Ideal', zorder=2)
+                ax_L1.set(xlabel='Viscosidad Experimental (cP)', ylabel='Viscosidad Calculada (cP)')
+                ax_L1.grid(True, linestyle=':', alpha=0.7)
+                ax_L1.legend()
+                st.pyplot(fig_L1)
         with col_metricas_L1:
             st.markdown("<br><br>", unsafe_allow_html=True)
             st.metric(label="Coeficiente R²", value=f"{r2_L1:.4f}")
@@ -753,14 +745,15 @@ elif seccion == "💧 SoyBean Oil":
         
         col_grafica_L2, col_metricas_L2 = st.columns([3, 1])
         with col_grafica_L2:
-            fig_L2, ax_L2 = plt.subplots(figsize=(7, 5))
-            ax_L2.scatter(y_true_L2, y_pred_L2, color='darkorange', edgecolor='black', s=80, label='Predicción L2', zorder=3)
-            min_v, max_v = min(y_true_L2.min(), y_pred_L2.min())*0.95, max(y_true_L2.max(), y_pred_L2.max())*1.05
-            ax_L2.plot([min_v, max_v], [min_v, max_v], 'k--', label='Ideal', zorder=2)
-            ax_L2.set(xlabel='Viscosidad Experimental (cP)', ylabel='Viscosidad Calculada (cP)')
-            ax_L2.grid(True, linestyle=':', alpha=0.7)
-            ax_L2.legend()
-            st.pyplot(fig_L2)
+            with plt.style.context('default'):
+                fig_L2, ax_L2 = plt.subplots(figsize=(7, 5))
+                ax_L2.scatter(y_true_L2, y_pred_L2, color='darkorange', edgecolor='black', s=80, label='Predicción L2', zorder=3)
+                min_v, max_v = min(y_true_L2.min(), y_pred_L2.min())*0.95, max(y_true_L2.max(), y_pred_L2.max())*1.05
+                ax_L2.plot([min_v, max_v], [min_v, max_v], 'k--', label='Ideal', zorder=2)
+                ax_L2.set(xlabel='Viscosidad Experimental (cP)', ylabel='Viscosidad Calculada (cP)')
+                ax_L2.grid(True, linestyle=':', alpha=0.7)
+                ax_L2.legend()
+                st.pyplot(fig_L2)
         with col_metricas_L2:
             st.markdown("<br><br>", unsafe_allow_html=True)
             st.metric(label="Coeficiente R²", value=f"{r2_L2:.4f}")
@@ -786,14 +779,15 @@ elif seccion == "💧 SoyBean Oil":
         
         col_grafica_L3, col_metricas_L3 = st.columns([3, 1])
         with col_grafica_L3:
-            fig_L3, ax_L3 = plt.subplots(figsize=(7, 5))
-            ax_L3.scatter(y_true_L3, y_pred_L3, color='teal', edgecolor='black', s=80, label='Predicción L3', zorder=3)
-            min_v, max_v = min(y_true_L3.min(), y_pred_L3.min())*0.95, max(y_true_L3.max(), y_pred_L3.max())*1.05
-            ax_L3.plot([min_v, max_v], [min_v, max_v], 'k--', label='Ideal', zorder=2)
-            ax_L3.set(xlabel='Viscosidad Experimental (cP)', ylabel='Viscosidad Calculada (cP)')
-            ax_L3.grid(True, linestyle=':', alpha=0.7)
-            ax_L3.legend()
-            st.pyplot(fig_L3)
+            with plt.style.context('default'):
+                fig_L3, ax_L3 = plt.subplots(figsize=(7, 5))
+                ax_L3.scatter(y_true_L3, y_pred_L3, color='teal', edgecolor='black', s=80, label='Predicción L3', zorder=3)
+                min_v, max_v = min(y_true_L3.min(), y_pred_L3.min())*0.95, max(y_true_L3.max(), y_pred_L3.max())*1.05
+                ax_L3.plot([min_v, max_v], [min_v, max_v], 'k--', label='Ideal', zorder=2)
+                ax_L3.set(xlabel='Viscosidad Experimental (cP)', ylabel='Viscosidad Calculada (cP)')
+                ax_L3.grid(True, linestyle=':', alpha=0.7)
+                ax_L3.legend()
+                st.pyplot(fig_L3)
         with col_metricas_L3:
             st.markdown("<br><br>", unsafe_allow_html=True)
             st.metric(label="Coeficiente R²", value=f"{r2_L3:.4f}")
@@ -819,14 +813,15 @@ elif seccion == "💧 SoyBean Oil":
         
         col_grafica_L4, col_metricas_L4 = st.columns([3, 1])
         with col_grafica_L4:
-            fig_L4, ax_L4 = plt.subplots(figsize=(7, 5))
-            ax_L4.scatter(y_true_L4, y_pred_L4, color='forestgreen', edgecolor='black', s=80, label='Predicción L4', zorder=3)
-            min_v, max_v = min(y_true_L4.min(), y_pred_L4.min())*0.95, max(y_true_L4.max(), y_pred_L4.max())*1.05
-            ax_L4.plot([min_v, max_v], [min_v, max_v], 'k--', label='Ideal', zorder=2)
-            ax_L4.set(xlabel='Viscosidad Experimental (cP)', ylabel='Viscosidad Calculada (cP)')
-            ax_L4.grid(True, linestyle=':', alpha=0.7)
-            ax_L4.legend()
-            st.pyplot(fig_L4)
+            with plt.style.context('default'):
+                fig_L4, ax_L4 = plt.subplots(figsize=(7, 5))
+                ax_L4.scatter(y_true_L4, y_pred_L4, color='forestgreen', edgecolor='black', s=80, label='Predicción L4', zorder=3)
+                min_v, max_v = min(y_true_L4.min(), y_pred_L4.min())*0.95, max(y_true_L4.max(), y_pred_L4.max())*1.05
+                ax_L4.plot([min_v, max_v], [min_v, max_v], 'k--', label='Ideal', zorder=2)
+                ax_L4.set(xlabel='Viscosidad Experimental (cP)', ylabel='Viscosidad Calculada (cP)')
+                ax_L4.grid(True, linestyle=':', alpha=0.7)
+                ax_L4.legend()
+                st.pyplot(fig_L4)
         with col_metricas_L4:
             st.markdown("<br><br>", unsafe_allow_html=True)
             st.metric(label="Coeficiente R²", value=f"{r2_L4:.4f}")
