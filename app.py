@@ -136,31 +136,43 @@ if seccion == "💨 Cake Oven Gas":
         eta_mezcla = suma_num / suma_den
         return eta_mezcla, xi_raiz_m, xi_eta_raiz_m, suma_num, suma_den
 
-    def generar_curva_viscosidad_T(modelo_nombre, y_array, M_array, df, regla='wilke'):
-        T_rango = np.linspace(250, 600, 30)
-        eta_mezcla_rango = []
+    def generar_curva_viscosidad_T_todos_modelos(y_array, M_array, df, regla='wilke'):
+        T_rango = np.linspace(310, 395, 50) # Rango ajustado para parecerse a tu imagen
+        
+        # Diccionario para almacenar las listas de viscosidad de cada modelo
+        eta_mezcla_rango = {'M1': [], 'M2': [], 'M3': [], 'M4': []}
         
         for t in T_rango:
-            eta_i_t = []
-            for idx, row in df.iterrows():
-                if "1" in modelo_nombre:
-                    v, _, _ = modelo_1_chapman_enskog(t, row['M (g/mol)'], row['σ (Å)'], row['ε/k (K)'])
-                elif "2" in modelo_nombre:
-                    v, _, _ = modelo_2_estados_correspondientes(t, row['M (g/mol)'], row['V_c (cm3/mol)'], row['T_c (K)'])
-                elif "3" in modelo_nombre:
-                    v = modelo_3_sutherland(t, row['η_0 (Pa*s)'], row['T_0 (K)'], row['S (K)'])
-                elif "4" in modelo_nombre:
-                    v, _, _ = modelo_4_yoon_thodos(t, row['M (g/mol)'], row['T_c (K)'], row['P_c (atm)'])
-                eta_i_t.append(v)
-                
-            eta_array_t = np.array(eta_i_t)
+            eta_i_m1, eta_i_m2, eta_i_m3, eta_i_m4 = [], [], [], []
             
-            if regla == 'wilke':
-                eta_m, _ = regla_mezcla_wilke(y_array, eta_array_t, M_array)
-            elif regla == 'hz':
-                eta_m, _, _, _, _ = regla_mezcla_herning_zipperer_detallado(y_array, eta_array_t, M_array)
+            for idx, row in df.iterrows():
+                # Calculamos la viscosidad pura de cada gas a temperatura T con los 4 modelos
+                v1, _, _ = modelo_1_chapman_enskog(t, row['M (g/mol)'], row['σ (Å)'], row['ε/k (K)'])
+                v2, _, _, _ = modelo_2_estados_correspondientes(row['Componente'], t, row['M (g/mol)'], row['P_c (atm)'], row['T_c (K)'])
+                v3 = modelo_3_sutherland(t, row['η_0 (Pa*s)'], row['T_0 (K)'], row['S (K)'])
+                v4, _, _ = modelo_4_yoon_thodos(t, row['M (g/mol)'], row['T_c (K)'], row['P_c (atm)'])
                 
-            eta_mezcla_rango.append(eta_m)
+                eta_i_m1.append(v1)
+                eta_i_m2.append(v2)
+                eta_i_m3.append(v3)
+                eta_i_m4.append(v4)
+            
+            # Ahora aplicamos la regla de mezcla elegida para cada uno de los 4 arrays de viscosidades puras
+            if regla == 'wilke':
+                m1_mix, _ = regla_mezcla_wilke(y_array, np.array(eta_i_m1), M_array)
+                m2_mix, _ = regla_mezcla_wilke(y_array, np.array(eta_i_m2), M_array)
+                m3_mix, _ = regla_mezcla_wilke(y_array, np.array(eta_i_m3), M_array)
+                m4_mix, _ = regla_mezcla_wilke(y_array, np.array(eta_i_m4), M_array)
+            elif regla == 'hz':
+                m1_mix, _, _, _, _ = regla_mezcla_herning_zipperer_detallado(y_array, np.array(eta_i_m1), M_array)
+                m2_mix, _, _, _, _ = regla_mezcla_herning_zipperer_detallado(y_array, np.array(eta_i_m2), M_array)
+                m3_mix, _, _, _, _ = regla_mezcla_herning_zipperer_detallado(y_array, np.array(eta_i_m3), M_array)
+                m4_mix, _, _, _, _ = regla_mezcla_herning_zipperer_detallado(y_array, np.array(eta_i_m4), M_array)
+                
+            eta_mezcla_rango['M1'].append(m1_mix)
+            eta_mezcla_rango['M2'].append(m2_mix)
+            eta_mezcla_rango['M3'].append(m3_mix)
+            eta_mezcla_rango['M4'].append(m4_mix)
             
         return T_rango, eta_mezcla_rango
 
@@ -448,16 +460,46 @@ if seccion == "💨 Cake Oven Gas":
             st.metric(label="Viscosidad de la Mezcla (η_m)", value=f"{viscosidad_mezcla_w:.4e} Pa*s")
             st.info(f"Suma de X_i original: **{suma_X:.6f}**\n\n*(Se normalizó a 1.0 automáticamente)*")
 
-            # GRÁFICA WILKE
+            # GRÁFICA WILKE MULTIPLE
         st.divider()
-        st.subheader(f"📈 Comportamiento Térmico de la Mezcla ({modelo_seleccionado_wilke} + Wilke)")
-        T_plot_w, eta_plot_w = generar_curva_viscosidad_T(modelo_seleccionado_wilke, y_array, M_array, df_comp, regla='wilke')
+        st.subheader("📈 Comportamiento de la Mezcla vs Temperatura (Wilke)")
         
-        fig_w, ax_w = plt.subplots(figsize=(10, 4))
-        ax_w.plot(T_plot_w, eta_plot_w, color='crimson', linewidth=2.5, marker='o', markersize=4)
-        ax_w.set_xlabel('Temperatura (K)', fontweight='bold')
-        ax_w.set_ylabel('Viscosidad de Mezcla (Pa*s)', fontweight='bold')
-        ax_w.grid(True, linestyle='--', alpha=0.6)
+        # Llamamos a la nueva función que calcula los 4 modelos
+        T_plot_w, eta_plot_dict_w = generar_curva_viscosidad_T_todos_modelos(y_array, M_array, df_comp, regla='wilke')
+        
+        # Obtenemos un T representativo para poner el "Punto Gigante" (ej. T_exp_default del H2 que es el mayoritario)
+        T_punto = df_comp.loc[0, 'T_exp_default (K)'] 
+        
+        # Estilo oscuro
+        plt.style.use('dark_background')
+        fig_w, ax_w = plt.subplots(figsize=(10, 5))
+        
+        # Colores idénticos a tu imagen
+        colores = {'M1': '#e63946', 'M2': '#f4a261', 'M3': '#2a9d8f', 'M4': '#2b9348'}
+        
+        for modelo_nombre, eta_plot in eta_plot_dict_w.items():
+            # 1. Graficamos la línea suave (sin markers)
+            ax_w.plot(T_plot_w, eta_plot, color=colores[modelo_nombre], linewidth=2.5, label=modelo_nombre)
+            
+            # 2. Interpolar el valor Y en T_punto para poner el marcador gigante
+            eta_punto = np.interp(T_punto, T_plot_w, eta_plot)
+            ax_w.plot(T_punto, eta_punto, marker='o', markersize=12, color=colores[modelo_nombre], markeredgecolor='black', markeredgewidth=1.5, zorder=5)
+
+        # Configuración visual
+        ax_w.set_title("Comportamiento de la Mezcla vs Temperatura", fontweight='bold', fontsize=14, color='white')
+        ax_w.set_xlabel('Temperatura (K)', fontweight='bold', fontsize=12, color='white')
+        ax_w.set_ylabel('Viscosidad de Mezcla (Pa*s)', fontweight='bold', fontsize=12, color='white')
+        
+        # Cuadrícula clara estilo tu imagen
+        ax_w.grid(True, linestyle=':', alpha=0.4, color='white')
+        
+        # Leyenda fondo blanco letra negra
+        legend = ax_w.legend(loc='upper right', frameon=True, facecolor='white', edgecolor='black', labelcolor='black')
+        
+        # Hacer el fondo de la figura y del eje transparentes o negros para q cuadre con el dark mode
+        fig_w.patch.set_facecolor('#0e1117') 
+        ax_w.set_facecolor('#0e1117')
+        
         st.pyplot(fig_w)
 
 
@@ -511,17 +553,37 @@ if seccion == "💨 Cake Oven Gas":
             st.write(f"**Denominador | Σ(X_i * √M_i):** {suma_denominador:.4f}")
             st.info(f"Suma parcial (X_i original): **{suma_X:.8f}**\n\n*(La normalización dividió cada X_i entre {suma_X:.8f})*")
 
-            # GRÁFICA HERNING-ZIPPERER
+            # GRÁFICA HERNING-ZIPPERER MULTIPLE
         st.divider()
-        st.subheader(f"📈 Comportamiento Térmico de la Mezcla ({modelo_seleccionado_hz} + Herning-Zipperer)")
-        T_plot_hz, eta_plot_hz = generar_curva_viscosidad_T(modelo_seleccionado_hz, y_array, M_array, df_comp, regla='hz')
+        st.subheader("📈 Comportamiento de la Mezcla vs Temperatura (Herning-Zipperer)")
         
-        fig_hz, ax_hz = plt.subplots(figsize=(10, 4))
-        ax_hz.plot(T_plot_hz, eta_plot_hz, color='darkcyan', linewidth=2.5, marker='s', markersize=4)
-        ax_hz.set_xlabel('Temperatura (K)', fontweight='bold')
-        ax_hz.set_ylabel('Viscosidad de Mezcla (Pa*s)', fontweight='bold')
-        ax_hz.grid(True, linestyle='--', alpha=0.6)
+        # Llamamos a la nueva función que calcula los 4 modelos, pero con la regla 'hz'
+        T_plot_hz, eta_plot_dict_hz = generar_curva_viscosidad_T_todos_modelos(y_array, M_array, df_comp, regla='hz')
+        
+        T_punto = df_comp.loc[0, 'T_exp_default (K)'] 
+        
+        plt.style.use('dark_background')
+        fig_hz, ax_hz = plt.subplots(figsize=(10, 5))
+        colores = {'M1': '#e63946', 'M2': '#f4a261', 'M3': '#2a9d8f', 'M4': '#2b9348'}
+        
+        for modelo_nombre, eta_plot in eta_plot_dict_hz.items():
+            ax_hz.plot(T_plot_hz, eta_plot, color=colores[modelo_nombre], linewidth=2.5, label=modelo_nombre)
+            
+            eta_punto = np.interp(T_punto, T_plot_hz, eta_plot)
+            ax_hz.plot(T_punto, eta_punto, marker='o', markersize=12, color=colores[modelo_nombre], markeredgecolor='black', markeredgewidth=1.5, zorder=5)
+
+        ax_hz.set_title("Comportamiento de la Mezcla vs Temperatura", fontweight='bold', fontsize=14, color='white')
+        ax_hz.set_xlabel('Temperatura (K)', fontweight='bold', fontsize=12, color='white')
+        ax_hz.set_ylabel('Viscosidad de Mezcla (Pa*s)', fontweight='bold', fontsize=12, color='white')
+        ax_hz.grid(True, linestyle=':', alpha=0.4, color='white')
+        
+        legend = ax_hz.legend(loc='upper right', frameon=True, facecolor='white', edgecolor='black', labelcolor='black')
+        
+        fig_hz.patch.set_facecolor('#0e1117') 
+        ax_hz.set_facecolor('#0e1117')
+        
         st.pyplot(fig_hz)
+        
 
 
 # =====================================================================
